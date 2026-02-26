@@ -17,10 +17,10 @@ int ESMC_StateGetField(ESMC_State state, const char* name, ESMC_Field* field) {
     return ESMF_SUCCESS;
 }
 
-int ESMC_FieldGetPtr(ESMC_Field field, int localDe, void** ptr) {
+void* ESMC_FieldGetPtr(ESMC_Field field, int localDe, int *rc) {
     // Dummy implementation
-    if (ptr) *ptr = nullptr;
-    return ESMF_SUCCESS;
+    if (rc) *rc = ESMF_SUCCESS;
+    return nullptr;
 }
 
 }

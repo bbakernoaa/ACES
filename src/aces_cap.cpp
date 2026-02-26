@@ -31,17 +31,18 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
 
     // Retrieve field pointers from ESMF State (using mock/C-API)
     ESMC_Field f_base, f_scale, f_mask, f_result;
+    int local_rc;
     ESMC_StateGetField(importState, "base_emissions", &f_base);
-    ESMC_FieldGetPtr(f_base, 0, (void**)&base_ptr);
+    base_ptr = (double*)ESMC_FieldGetPtr(f_base, 0, &local_rc);
 
     ESMC_StateGetField(importState, "scaling_factor", &f_scale);
-    ESMC_FieldGetPtr(f_scale, 0, (void**)&scale_ptr);
+    scale_ptr = (double*)ESMC_FieldGetPtr(f_scale, 0, &local_rc);
 
     ESMC_StateGetField(importState, "mask", &f_mask);
-    ESMC_FieldGetPtr(f_mask, 0, (void**)&mask_ptr);
+    mask_ptr = (double*)ESMC_FieldGetPtr(f_mask, 0, &local_rc);
 
     ESMC_StateGetField(exportState, "scaled_emissions", &f_result);
-    ESMC_FieldGetPtr(f_result, 0, (void**)&result_ptr);
+    result_ptr = (double*)ESMC_FieldGetPtr(f_result, 0, &local_rc);
 
     // If pointers are null (e.g. in unit tests with mock), we can't proceed with deep_copy.
     // In a real run, these should be valid.
