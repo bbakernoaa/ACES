@@ -20,10 +20,9 @@ namespace aces {
  * @param importState The ESMF Import State.
  * @param exportState The ESMF Export State.
  * @param clock The ESMF Clock.
- * @param vm The ESMF Virtual Machine.
  * @param rc Return code pointer.
  */
-void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc);
+void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
 
 /**
  * @brief Runs the ACES component.
@@ -34,10 +33,9 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
  * @param importState The ESMF Import State.
  * @param exportState The ESMF Export State.
  * @param clock The ESMF Clock.
- * @param vm The ESMF Virtual Machine.
  * @param rc Return code pointer.
  */
-void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc);
+void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
 
 /**
  * @brief Finalizes the ACES component.
@@ -48,10 +46,9 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
  * @param importState The ESMF Import State.
  * @param exportState The ESMF Export State.
  * @param clock The ESMF Clock.
- * @param vm The ESMF Virtual Machine.
  * @param rc Return code pointer.
  */
-void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc);
+void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
 
 } // namespace aces
 

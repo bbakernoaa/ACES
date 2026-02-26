@@ -7,7 +7,7 @@ namespace aces {
 /**
  * @brief Global implementation of ACES component initialization.
  */
-void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc) {
+void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
     if (!Kokkos::is_initialized()) {
         Kokkos::initialize();
         std::cout << "ACES_Initialize: Kokkos initialized." << std::endl;
@@ -18,7 +18,7 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
 /**
  * @brief Global implementation of ACES component run phase.
  */
-void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc) {
+void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
     std::cout << "ACES_Run: Executing." << std::endl;
     // Main compute logic will be added here
     if (rc) *rc = ESMF_SUCCESS;
@@ -27,7 +27,7 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
 /**
  * @brief Global implementation of ACES component finalization.
  */
-void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc) {
+void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
     if (Kokkos::is_initialized()) {
         Kokkos::finalize();
         std::cout << "ACES_Finalize: Kokkos finalized." << std::endl;
@@ -44,24 +44,24 @@ extern "C" {
  * @brief ESMF initialization entry point.
  * Calls aces::Initialize.
  */
-void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc) {
-    aces::Initialize(comp, importState, exportState, clock, vm, rc);
+void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
+    aces::Initialize(comp, importState, exportState, clock, rc);
 }
 
 /**
  * @brief ESMF run entry point.
  * Calls aces::Run.
  */
-void ACES_Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc) {
-    aces::Run(comp, importState, exportState, clock, vm, rc);
+void ACES_Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
+    aces::Run(comp, importState, exportState, clock, rc);
 }
 
 /**
  * @brief ESMF finalization entry point.
  * Calls aces::Finalize.
  */
-void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc) {
-    aces::Finalize(comp, importState, exportState, clock, vm, rc);
+void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
+    aces::Finalize(comp, importState, exportState, clock, rc);
 }
 
 /**

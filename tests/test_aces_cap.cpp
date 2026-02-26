@@ -6,8 +6,8 @@
 // Declare the functions we want to test
 extern "C" {
 void ACES_SetServices(ESMC_GridComp comp, int* rc);
-void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc);
-void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, ESMC_VM vm, int* rc);
+void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
+void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
 }
 
 // We remove the SetServices test because calling ESMC_GridCompSetEntryPoint
@@ -32,17 +32,14 @@ TEST(ACES_Cap_Test, Lifecycle) {
     ESMC_Clock clock;
     std::memset(&clock, 0, sizeof(clock));
 
-    ESMC_VM vm;
-    std::memset(&vm, 0, sizeof(vm));
-
     // Initialize
     // Note: This initializes Kokkos
-    ACES_Initialize(comp, importState, exportState, clock, vm, &rc);
+    ACES_Initialize(comp, importState, exportState, &clock, &rc);
     EXPECT_EQ(rc, ESMF_SUCCESS);
 
     // Finalize
     // Note: This finalizes Kokkos. After this, Kokkos cannot be re-initialized in this process.
-    ACES_Finalize(comp, importState, exportState, clock, vm, &rc);
+    ACES_Finalize(comp, importState, exportState, &clock, &rc);
     EXPECT_EQ(rc, ESMF_SUCCESS);
 }
 
