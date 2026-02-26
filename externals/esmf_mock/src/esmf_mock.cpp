@@ -12,12 +12,12 @@ int ESMC_GridCompSetEntryPoint(ESMC_GridComp comp, ESMC_Method method, void (*fu
     return ESMF_SUCCESS;
 }
 
-int ESMC_GridCompSetInternalData(ESMC_GridComp comp, void* data) {
+int ESMC_GridCompSetInternalState(ESMC_GridComp comp, void* data) {
     gridcomp_internal_data[comp.ptr] = data;
     return ESMF_SUCCESS;
 }
 
-int ESMC_GridCompGetInternalData(ESMC_GridComp comp, void** data) {
+int ESMC_GridCompGetInternalState(ESMC_GridComp comp, void** data) {
     if (data) {
         *data = gridcomp_internal_data[comp.ptr];
     }

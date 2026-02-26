@@ -75,7 +75,7 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
         data->active_schemes.push_back(PhysicsFactory::CreateScheme(scheme_config));
     }
 
-    ESMC_GridCompSetInternalData(comp, data);
+    ESMC_GridCompSetInternalState(comp, data);
 
     if (rc) *rc = ESMF_SUCCESS;
 }
@@ -84,7 +84,7 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     std::cout << "ACES_Run: Executing." << std::endl;
 
     void* data_ptr;
-    ESMC_GridCompGetInternalData(comp, &data_ptr);
+    ESMC_GridCompGetInternalState(comp, &data_ptr);
     auto data = static_cast<AcesInternalData*>(data_ptr);
 
     // TODO: Retrieve actual dimensions from ESMF Grid/Field
@@ -126,7 +126,7 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
 
 void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
     void* data_ptr;
-    ESMC_GridCompGetInternalData(comp, &data_ptr);
+    ESMC_GridCompGetInternalState(comp, &data_ptr);
     if (data_ptr) {
         delete static_cast<AcesInternalData*>(data_ptr);
     }
