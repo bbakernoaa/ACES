@@ -68,20 +68,27 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
         std::cout << "ACES_Initialize: Kokkos initialized." << std::endl;
     }
 
-    auto data = new AcesInternalData();
-    data->config = ParseConfig("aces_config.yaml");
+    if (comp.ptr != nullptr) {
+        auto data = new AcesInternalData();
+        data->config = ParseConfig("aces_config.yaml");
 
-    for (const auto& scheme_config : data->config.physics_schemes) {
-        data->active_schemes.push_back(PhysicsFactory::CreateScheme(scheme_config));
+        for (const auto& scheme_config : data->config.physics_schemes) {
+            data->active_schemes.push_back(PhysicsFactory::CreateScheme(scheme_config));
+        }
+
+        ESMC_GridCompSetInternalState(comp, data);
     }
-
-    ESMC_GridCompSetInternalState(comp, data);
 
     if (rc) *rc = ESMF_SUCCESS;
 }
 
 void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
     std::cout << "ACES_Run: Executing." << std::endl;
+
+    if (comp.ptr == nullptr) {
+        if (rc) *rc = ESMF_SUCCESS;
+        return;
+    }
 
     int rc_internal;
     void* data_ptr = ESMC_GridCompGetInternalState(comp, &rc_internal);
@@ -125,10 +132,12 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
 }
 
 void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
-    int rc_internal;
-    void* data_ptr = ESMC_GridCompGetInternalState(comp, &rc_internal);
-    if (data_ptr) {
-        delete static_cast<AcesInternalData*>(data_ptr);
+    if (comp.ptr != nullptr) {
+        int rc_internal;
+        void* data_ptr = ESMC_GridCompGetInternalState(comp, &rc_internal);
+        if (data_ptr) {
+            delete static_cast<AcesInternalData*>(data_ptr);
+        }
     }
 
     if (Kokkos::is_initialized()) {
