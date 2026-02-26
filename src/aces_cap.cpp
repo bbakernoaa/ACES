@@ -1,6 +1,9 @@
 #include "aces/aces.hpp"
 #include "aces/aces_state.hpp"
 #include "aces/aces_utils.hpp"
+#include "aces/physics/aces_seasalt.hpp"
+#include "aces/physics/aces_dust.hpp"
+#include "aces/physics/aces_biogenics.hpp"
 #include <iostream>
 #include <Kokkos_Core.hpp>
 
@@ -44,7 +47,19 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     ESMC_StateGetField(exportState, "total_nox_emissions", &field);
     aces_export.total_nox_emissions = WrapESMCField(field, nx, ny, nz);
 
-    // Main compute logic will be added here
+    ESMC_StateGetField(exportState, "sea_salt_emissions", &field);
+    aces_export.sea_salt_emissions = WrapESMCField(field, nx, ny, nz);
+
+    ESMC_StateGetField(exportState, "dust_emissions", &field);
+    aces_export.dust_emissions = WrapESMCField(field, nx, ny, nz);
+
+    ESMC_StateGetField(exportState, "biogenic_emissions", &field);
+    aces_export.biogenic_emissions = WrapESMCField(field, nx, ny, nz);
+
+    // Main compute logic: Dispatch physics modules.
+    physics::RunSeaSalt(aces_import, aces_export);
+    physics::RunDust(aces_import, aces_export);
+    physics::RunBiogenics(aces_import, aces_export);
 
     if (rc) *rc = ESMF_SUCCESS;
 }

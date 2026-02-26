@@ -61,6 +61,9 @@ endif()
 
 add_library(aces SHARED
   src/aces_cap.cpp
+  src/physics/aces_seasalt.cpp
+  src/physics/aces_dust.cpp
+  src/physics/aces_biogenics.cpp
 )
 
 target_include_directories(aces PUBLIC
@@ -101,6 +104,17 @@ target_link_libraries(test_aces_utils
   GTest::gtest_main
 )
 
+add_executable(test_aces_physics
+  tests/test_aces_physics.cpp
+)
+
+target_link_libraries(test_aces_physics
+  PRIVATE
+  aces
+  GTest::gtest_main
+)
+
 include(GoogleTest)
 gtest_discover_tests(test_aces_cap)
 gtest_discover_tests(test_aces_utils)
+gtest_discover_tests(test_aces_physics)

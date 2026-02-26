@@ -36,6 +36,9 @@ struct AcesImportState {
 struct AcesExportState {
     // Final calculated emissions
     UnmanagedHostView3D total_nox_emissions;    ///< Total calculated NOX emissions [kg/m2/s]
+    UnmanagedHostView3D sea_salt_emissions;     ///< Total calculated Sea Salt emissions [kg/m2/s]
+    UnmanagedHostView3D dust_emissions;         ///< Total calculated Dust emissions [kg/m2/s]
+    UnmanagedHostView3D biogenic_emissions;     ///< Total calculated Biogenic emissions [kg/m2/s]
 };
 
 } // namespace aces
