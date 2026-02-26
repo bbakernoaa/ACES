@@ -1,0 +1,36 @@
+name: Run all CI tests
+on: [pull_request, push]
+
+jobs:
+  run_all_tests:
+    runs-on: ubuntu-latest
+    name: Full CI (ACES)
+    container: jcsda/docker-gnu-openmpi-dev:1.9
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Build and Test ACES
+      shell: bash
+      run: |
+        # Source the Spack environment to load compilers and libraries (ESMF, etc.)
+        if [ -f /opt/spack-environment/activate.sh ]; then
+          source /opt/spack-environment/activate.sh
+        fi
+
+        # Create build directory
+        mkdir -p build
+        cd build
+
+        # Configure ACES
+        # - ACES_USE_MOCK_ESMF=OFF: Force use of system ESMF provided by the container
+        cmake .. -DACES_USE_MOCK_ESMF=OFF -DCMAKE_BUILD_TYPE=Release
+
+        # Build
+        make -j4
+
+        # Test
+        ctest --output-on-failure
