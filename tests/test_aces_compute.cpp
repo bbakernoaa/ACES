@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
-#include "aces/aces_compute.hpp"
-#include "aces/aces_config.hpp"
-#include "aces/aces_utils.hpp"
+
 #include <Kokkos_Core.hpp>
 #include <fstream>
 #include <map>
+
+#include "aces/aces_compute.hpp"
+#include "aces/aces_config.hpp"
+#include "aces/aces_utils.hpp"
 
 namespace aces {
 
@@ -14,7 +16,7 @@ namespace aces {
 class MockFieldResolver : public FieldResolver {
     std::map<std::string, UnmanagedHostView3D> fields;
 
-public:
+   public:
     void AddField(const std::string& name, UnmanagedHostView3D view) {
         fields[name] = view;
     }
@@ -31,7 +33,7 @@ public:
 };
 
 class AcesComputeTest : public ::testing::Test {
-protected:
+   protected:
     void SetUp() override {
         if (!Kokkos::is_initialized()) {
             Kokkos::initialize();
@@ -42,10 +44,13 @@ protected:
 TEST_F(AcesComputeTest, BranchlessReplaceLogic) {
     int nx = 10, ny = 10, nz = 1;
 
-    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> background_data("background", nx, ny, nz);
-    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> regional_data("regional", nx, ny, nz);
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> background_data("background", nx,
+                                                                                   ny, nz);
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> regional_data("regional", nx, ny,
+                                                                                 nz);
     Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> mask_data("mask", nx, ny, nz);
-    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> export_data("export", nx, ny, nz);
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> export_data("export", nx, ny,
+                                                                               nz);
 
     Kokkos::deep_copy(background_data, 5.0);
     Kokkos::deep_copy(regional_data, 10.0);
@@ -124,4 +129,4 @@ TEST_F(AcesComputeTest, YamlParsing) {
     std::remove("test_config.yaml");
 }
 
-} // namespace aces
+}  // namespace aces

@@ -1,11 +1,12 @@
 #ifndef ACES_PHYSICS_FACTORY_HPP
 #define ACES_PHYSICS_FACTORY_HPP
 
-#include "aces/physics_scheme.hpp"
-#include "aces/aces_config.hpp"
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
+
+#include "aces/aces_config.hpp"
+#include "aces/physics_scheme.hpp"
 
 namespace aces {
 
@@ -13,7 +14,7 @@ namespace aces {
  * @brief Factory class for creating and managing physics schemes.
  */
 class PhysicsFactory {
-public:
+   public:
     /**
      * @brief Creates a physics scheme based on the provided configuration.
      * @param config The configuration for the scheme.
@@ -22,6 +23,6 @@ public:
     static std::unique_ptr<PhysicsScheme> CreateScheme(const PhysicsSchemeConfig& config);
 };
 
-} // namespace aces
+}  // namespace aces
 
-#endif // ACES_PHYSICS_FACTORY_HPP
+#endif  // ACES_PHYSICS_FACTORY_HPP

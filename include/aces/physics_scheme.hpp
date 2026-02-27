@@ -1,9 +1,11 @@
 #ifndef ACES_PHYSICS_SCHEME_HPP
 #define ACES_PHYSICS_SCHEME_HPP
 
-#include "aces/aces_state.hpp"
 #include <yaml-cpp/yaml.h>
+
 #include <memory>
+
+#include "aces/aces_state.hpp"
 
 namespace aces {
 
@@ -11,7 +13,7 @@ namespace aces {
  * @brief Abstract base class for all physics schemes in ACES.
  */
 class PhysicsScheme {
-public:
+   public:
     virtual ~PhysicsScheme() = default;
 
     /**
@@ -28,6 +30,6 @@ public:
     virtual void Run(AcesImportState& import_state, AcesExportState& export_state) = 0;
 };
 
-} // namespace aces
+}  // namespace aces
 
-#endif // ACES_PHYSICS_SCHEME_HPP
+#endif  // ACES_PHYSICS_SCHEME_HPP

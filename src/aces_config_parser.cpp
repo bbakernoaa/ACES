@@ -1,13 +1,30 @@
-#include "aces/aces_config.hpp"
 #include <yaml-cpp/yaml.h>
+
 #include <iostream>
+
+#include "aces/aces_config.hpp"
+
+/**
+ * @file aces_config_parser.cpp
+ * @brief Implementation of the YAML configuration parser for ACES.
+ */
 
 namespace aces {
 
+/**
+ * @brief Parses the ACES configuration from a YAML file.
+ *
+ * This function reads species definitions, emission layers, and physics scheme
+ * configurations from the specified file.
+ *
+ * @param filename Path to the YAML configuration file.
+ * @return AcesConfig object containing all parsed information.
+ */
 AcesConfig ParseConfig(const std::string& filename) {
     AcesConfig config;
     YAML::Node root = YAML::LoadFile(filename);
 
+    // Parse species and their associated emission layers
     if (root["species"]) {
         for (auto const& species_node : root["species"]) {
             std::string species_name = species_node.first.as<std::string>();
@@ -29,6 +46,7 @@ AcesConfig ParseConfig(const std::string& filename) {
         }
     }
 
+    // Parse physics schemes and their options
     if (root["physics_schemes"]) {
         for (auto const& scheme_node : root["physics_schemes"]) {
             PhysicsSchemeConfig scheme;
@@ -46,4 +64,4 @@ AcesConfig ParseConfig(const std::string& filename) {
     return config;
 }
 
-} // namespace aces
+}  // namespace aces

@@ -17,7 +17,8 @@ namespace aces {
  * This alias is used for zero-copy wrapping of ESMF field data, which
  * follows the column-major (LayoutLeft) order and resides on the host.
  */
-using UnmanagedHostView3D = Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+using UnmanagedHostView3D = Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace,
+                                         Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
 
 /**
  * @brief Alias for a 3D Kokkos DualView with Fortran layout.
@@ -29,11 +30,11 @@ using DualView3D = Kokkos::DualView<double***, Kokkos::LayoutLeft>;
  */
 struct AcesImportState {
     // Meteorology from Atmosphere (e.g., UFS)
-    DualView3D temperature;        ///< Air temperature [K]
-    DualView3D wind_speed_10m;     ///< Wind speed at 10m [m/s]
+    DualView3D temperature;     ///< Air temperature [K]
+    DualView3D wind_speed_10m;  ///< Wind speed at 10m [m/s]
 
     // Base Emissions interpolated by CDEPS
-    DualView3D base_anthropogenic_nox; ///< Base NOX emissions [kg/m2/s]
+    DualView3D base_anthropogenic_nox;  ///< Base NOX emissions [kg/m2/s]
 };
 
 /**
@@ -41,9 +42,9 @@ struct AcesImportState {
  */
 struct AcesExportState {
     // Final calculated emissions
-    DualView3D total_nox_emissions;    ///< Total calculated NOX emissions [kg/m2/s]
+    DualView3D total_nox_emissions;  ///< Total calculated NOX emissions [kg/m2/s]
 };
 
-} // namespace aces
+}  // namespace aces
 
-#endif // ACES_STATE_HPP
+#endif  // ACES_STATE_HPP

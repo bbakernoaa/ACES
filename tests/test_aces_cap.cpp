@@ -1,14 +1,18 @@
 #include <gtest/gtest.h>
-#include "ESMC.h"
-#include <iostream>
+
+#include <cstring>  // for memset
 #include <fstream>
-#include <cstring> // for memset
+#include <iostream>
+
+#include "ESMC.h"
 
 // Declare the functions we want to test
 extern "C" {
 void ACES_SetServices(ESMC_GridComp comp, int* rc);
-void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
-void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
+void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState,
+                     ESMC_Clock* clock, int* rc);
+void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState,
+                   ESMC_Clock* clock, int* rc);
 }
 
 // We remove the SetServices test because calling ESMC_GridCompSetEntryPoint
@@ -51,7 +55,7 @@ TEST(ACES_Cap_Test, Lifecycle) {
     EXPECT_EQ(rc, ESMF_SUCCESS);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     // If we were linking against real MPI and Kokkos needed it, we would init it here.
     // For now, standard gtest main logic is sufficient.

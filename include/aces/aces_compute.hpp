@@ -1,10 +1,11 @@
 #ifndef ACES_COMPUTE_HPP
 #define ACES_COMPUTE_HPP
 
+#include <functional>
+#include <string>
+
 #include "aces/aces_config.hpp"
 #include "aces/aces_state.hpp"
-#include <string>
-#include <functional>
 
 namespace aces {
 
@@ -13,7 +14,7 @@ namespace aces {
  * This allows the compute engine to be decoupled from ESMF for testing.
  */
 class FieldResolver {
-public:
+   public:
     virtual ~FieldResolver() = default;
     virtual UnmanagedHostView3D ResolveImport(const std::string& name, int nx, int ny, int nz) = 0;
     virtual UnmanagedHostView3D ResolveExport(const std::string& name, int nx, int ny, int nz) = 0;
@@ -27,12 +28,8 @@ public:
  * @param ny Grid Y dimension.
  * @param nz Grid Z dimension.
  */
-void ComputeEmissions(
-    const AcesConfig& config,
-    FieldResolver& resolver,
-    int nx, int ny, int nz
-);
+void ComputeEmissions(const AcesConfig& config, FieldResolver& resolver, int nx, int ny, int nz);
 
-} // namespace aces
+}  // namespace aces
 
-#endif // ACES_COMPUTE_HPP
+#endif  // ACES_COMPUTE_HPP

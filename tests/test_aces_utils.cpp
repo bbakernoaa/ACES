@@ -1,15 +1,17 @@
 #include <gtest/gtest.h>
+
 #include <Kokkos_Core.hpp>
-#include "aces/aces_utils.hpp"
-#include <vector>
-#include <cstring>
 #include <algorithm>
+#include <cstring>
+#include <vector>
+
+#include "aces/aces_utils.hpp"
 
 namespace aces {
 namespace test {
 
 class AcesUtilsTest : public ::testing::Test {
-protected:
+   protected:
     void SetUp() override {
         if (!Kokkos::is_initialized()) {
             Kokkos::initialize();
@@ -55,5 +57,5 @@ TEST_F(AcesUtilsTest, WrapESMCFieldUpdatesRawData) {
     EXPECT_DOUBLE_EQ(view(2, 3, 1), 42.0);
 }
 
-} // namespace test
-} // namespace aces
+}  // namespace test
+}  // namespace aces

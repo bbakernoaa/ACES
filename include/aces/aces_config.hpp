@@ -1,47 +1,59 @@
 #ifndef ACES_CONFIG_HPP
 #define ACES_CONFIG_HPP
 
+/**
+ * @file aces_config.hpp
+ * @brief Configuration structures and parser for ACES.
+ */
+
+#include <yaml-cpp/yaml.h>
+
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-#include <yaml-cpp/yaml.h>
 
 namespace aces {
 
 /**
- * @brief Represents configuration for a physics scheme.
+ * @struct PhysicsSchemeConfig
+ * @brief Configuration for a physics scheme.
  */
 struct PhysicsSchemeConfig {
-    std::string name;
-    std::string language;
-    YAML::Node options;
+    std::string name;      ///< Name of the physics scheme.
+    std::string language;  ///< Implementation language (e.g., "cpp", "fortran").
+    YAML::Node options;    ///< Scheme-specific options.
 };
 
 /**
+ * @struct EmissionLayer
  * @brief Represents a single layer of emissions to be applied.
  */
 struct EmissionLayer {
-    std::string operation; ///< "add" or "replace"
-    std::string field_name; ///< Name of the base field in ESMF State
-    std::string mask_name;  ///< Name of the mask field in ESMF State (empty if no mask)
-    double scale = 1.0;     ///< Scaling factor for this layer
+    std::string operation;   ///< Layer operation: "add" or "replace".
+    std::string field_name;  ///< Name of the base field in the ESMF State.
+    std::string mask_name;   ///< Name of the geographical mask field (optional).
+    double scale = 1.0;      ///< Scaling factor for this layer.
 };
 
 /**
- * @brief Configuration for ACES, containing layers for each species.
+ * @struct AcesConfig
+ * @brief Top-level configuration for ACES.
  */
 struct AcesConfig {
+    /// Map of species names to their ordered list of emission layers.
     std::map<std::string, std::vector<EmissionLayer>> species_layers;
+    /// List of active physics schemes to be executed.
     std::vector<PhysicsSchemeConfig> physics_schemes;
 };
 
 /**
  * @brief Parses the ACES configuration from a YAML file.
  * @param filename Path to the YAML configuration file.
- * @return AcesConfig object containing the parsed layers.
+ * @return AcesConfig object containing the parsed species and schemes.
+ * @throws YAML::Exception if the file is invalid or missing.
  */
 AcesConfig ParseConfig(const std::string& filename);
 
-} // namespace aces
+}  // namespace aces
 
-#endif // ACES_CONFIG_HPP
+#endif  // ACES_CONFIG_HPP
