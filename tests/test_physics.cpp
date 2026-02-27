@@ -63,6 +63,7 @@ TEST_F(PhysicsTest, NativeSchemeTest) {
     EXPECT_DOUBLE_EQ(hv(0, 0, 0), 2.0);  // 0.0 + 1.0 * 2.0
 }
 
+#ifdef ACES_HAS_FORTRAN
 TEST_F(PhysicsTest, FortranSchemeTest) {
     PhysicsSchemeConfig config;
     config.name = "fortran_bridge_example";
@@ -93,3 +94,4 @@ TEST_F(PhysicsTest, CombinedSchemesTest) {
     // (0.0 + 1.0 * 2.0) + 1.0 = 3.0
     EXPECT_DOUBLE_EQ(hv(0, 0, 0), 3.0);
 }
+#endif
