@@ -6,25 +6,33 @@
 #include "aces/aces_config.hpp"
 #include "aces/aces_data_ingestor.hpp"
 
-// Mock CDEPS functions for testing
+// For testing, we provide our own mock implementations of external C-linkage functions.
+// This allows us to verify the ingestor's logic in isolation without requiring
+// the full CDEPS and ESMF libraries during this unit test.
+
+// State for tracking mock calls
 static bool init_called = false;
 static bool finalize_called = false;
 static std::string last_read_stream = "";
 
+// We must use C linkage to match what Ingestor expects
 extern "C" {
 void cdeps_inline_init(const char* config_file) {
+    (void)config_file;
     init_called = true;
 }
 void cdeps_inline_read(double* buffer, const char* stream_name) {
     last_read_stream = stream_name;
     // Mock data
-    buffer[0] = 1.23;
+    if (buffer) buffer[0] = 1.23;
 }
 void cdeps_inline_finalize() {
     finalize_called = true;
 }
 
 // Mock ESMF functions if not available or to avoid complex setup
+// NOTE: These are only used if the ingestor calls them and they aren't linked from real ESMF
+// In this task, we assume we can provide these for the test.
 int ESMC_StateGetField(ESMC_State state, const char* name, ESMC_Field* field) {
     if (std::string(name) == "temperature" || std::string(name) == "wind_speed_10m") {
         field->ptr = (void*)0xDEADBEEF;  // Dummy non-null

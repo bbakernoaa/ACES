@@ -1,32 +1,19 @@
 #include "aces/aces_data_ingestor.hpp"
 
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <vector>
 
 #include "aces/aces_utils.hpp"
 
-#ifdef ACES_USING_MOCK_CDEPS
-// Internal mock for CDEPS-inline API if the library is not found.
-// This allows the code to compile and run in environments without CDEPS.
-extern "C" {
-void cdeps_inline_init(const char* config_file) {
-    (void)config_file;
-}
-void cdeps_inline_read(double* buffer, const char* stream_name) {
-    (void)buffer;
-    (void)stream_name;
-}
-void cdeps_inline_finalize() {}
-}
-#else
 // In a real environment, we would include <cdeps_inline.h>
+// Since CDEPS is a required dependency, we expect these symbols to be resolved at link time.
 extern "C" {
 void cdeps_inline_init(const char* config_file);
 void cdeps_inline_read(double* buffer, const char* stream_name);
 void cdeps_inline_finalize();
 }
-#endif
 
 namespace aces {
 

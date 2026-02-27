@@ -189,6 +189,14 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
                   << "x" << ny << "x" << nz << std::endl;
     }
 
+    // Lazily initialize persistent DualViews for physics plugins and export state.
+    // This avoids per-timestep allocation overhead.
+    // MUST be done before Ingest/Compute to ensure views are valid.
+    if (data->export_state.total_nox_emissions.view_host().data() == nullptr) {
+        data->export_state.total_nox_emissions =
+            GetDualView(exportState, "total_nox_emissions", nx, ny, nz);
+    }
+
     // Hybrid data ingestion
     data->ingestor.IngestMeteorology(importState, data->import_state, nx, ny, nz);
     if (!data->config.cdeps_config.streams.empty()) {
@@ -199,13 +207,6 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     // Run core compute engine (layer addition/replacement)
     AcesStateResolver resolver(data->import_state, data->export_state);
     ComputeEmissions(data->config, resolver, nx, ny, nz);
-
-    // Lazily initialize persistent DualViews for physics plugins and export state.
-    // This avoids per-timestep allocation overhead.
-    if (data->export_state.total_nox_emissions.view_host().data() == nullptr) {
-        data->export_state.total_nox_emissions =
-            GetDualView(exportState, "total_nox_emissions", nx, ny, nz);
-    }
 
     auto& imp = data->import_state;
     auto& exp = data->export_state;

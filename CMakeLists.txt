@@ -54,14 +54,33 @@ message(STATUS "Found ESMF: ${ESMF_VERSION}")
 find_package(MPI REQUIRED)
 message(STATUS "Found MPI: ${MPI_CXX_VERSION}")
 
-# If CDEPS is not found, we use a mock for the inline API to allow CI/Local builds to proceed
-# as CDEPS is a relatively new and potentially non-standard dependency.
+# CDEPS is a required dependency for the hybrid ingestion layer.
 find_package(CDEPS QUIET)
-if(CDEPS_FOUND)
-  message(STATUS "Found CDEPS: ${CDEPS_INCLUDE_DIRS}")
-else()
-  message(WARNING "CDEPS not found. Using internal mock for CDEPS-inline API.")
-  set(ACES_USING_MOCK_CDEPS ON)
+
+if(NOT CDEPS_FOUND AND ACES_HAS_FORTRAN)
+  message(STATUS "CDEPS not found on system, attempting to build from source using FetchContent...")
+
+  # CDEPS requires PIO
+  find_package(PIO QUIET)
+
+  if(PIO_FOUND)
+    FetchContent_Declare(
+      cdeps
+      GIT_REPOSITORY https://github.com/ESCOMP/CDEPS.git
+      GIT_TAG        main
+    )
+    FetchContent_MakeAvailable(cdeps)
+    if(TARGET streams)
+       set(CDEPS_FOUND TRUE)
+       add_library(CDEPS::CDEPS ALIAS streams)
+       message(STATUS "CDEPS built from source successfully.")
+    endif()
+  endif()
+endif()
+
+# Fallback: if not found and not built from source, it's an error.
+if(NOT CDEPS_FOUND)
+  message(FATAL_ERROR "CDEPS is required but was not found on the system or successfully built from source.")
 endif()
 
 # --- ACES Library ---
@@ -99,11 +118,7 @@ target_link_libraries(aces PUBLIC
   yaml-cpp
 )
 
-if(CDEPS_FOUND)
-  target_link_libraries(aces PUBLIC CDEPS::CDEPS)
-else()
-  target_compile_definitions(aces PRIVATE ACES_USING_MOCK_CDEPS)
-endif()
+target_link_libraries(aces PUBLIC CDEPS::CDEPS)
 
 if(MPI_FOUND)
     target_link_libraries(aces PUBLIC MPI::MPI_CXX)
