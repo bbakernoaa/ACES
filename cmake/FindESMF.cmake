@@ -52,6 +52,10 @@ if(NOT ESMF_FOUND)
   if(ESMFMKFILE AND EXISTS "${ESMFMKFILE}")
     message(STATUS "Found esmf.mk: ${ESMFMKFILE}")
 
+    # Also add the directory containing esmf.mk to search paths for modules
+    get_filename_component(ESMF_MK_DIR "${ESMFMKFILE}" DIRECTORY)
+    list(APPEND ESMF_INCLUDE_DIRS "${ESMF_MK_DIR}")
+
     # Create a temporary Makefile to extract variables
     # We extract include paths and link flags separately to avoid mixing them up
     set(MK_FILE "${CMAKE_BINARY_DIR}/esmf_probe.mk")
@@ -137,7 +141,6 @@ if(NOT ESMF_FOUND)
                           NO_DEFAULT_PATH)
                 if(EXTRA_ESMF_MOD_DIR)
                     list(APPEND ESMF_INCLUDE_DIRS "${EXTRA_ESMF_MOD_DIR}")
-                    break()
                 endif()
             endif()
         endforeach()

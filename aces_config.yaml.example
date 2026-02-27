@@ -14,8 +14,9 @@ species:
       scale: 1.0
       category: "anthropogenic"
       hierarchy: 1
-      # Fields used in 'scale_fields' are also dynamically resolved.
-      # Here 'temperature' is pulled from the ESMF ImportState.
+      # We can use meteorological fields to scale emissions.
+      # Future support for complex thresholds or step functions can be implemented
+      # in the compute engine functors.
       scale_fields:
         - "temperature"
 
