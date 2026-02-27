@@ -7,8 +7,9 @@
 
 #include "aces/aces_utils.hpp"
 
-// In a real environment, we would include <cdeps_inline.h>
+// CDEPS-inline API.
 // Since CDEPS is a required dependency, we expect these symbols to be resolved at link time.
+// In a real environment, we would include <cdeps_inline.h> if it's available.
 extern "C" {
 void cdeps_inline_init(const char* config_file);
 void cdeps_inline_read(double* buffer, const char* stream_name);

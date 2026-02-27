@@ -51,11 +51,36 @@ endif()
 find_package(ESMF REQUIRED)
 message(STATUS "Found ESMF: ${ESMF_VERSION}")
 
+# Discovery PIO from ESMF if possible
+if(NOT PIO_FOUND)
+  set(PIO_ROOT "$ENV{PIO_ROOT}")
+  if(NOT PIO_ROOT)
+    # ESMF often links against NetCDF/PIO, we might find them in the same view
+      # We check common library lists in ESMF_LIBRARIES
+      foreach(lib ${ESMF_LIBRARIES})
+          if(lib MATCHES "^-L(.*)")
+              set(search_path "${CMAKE_MATCH_1}/../include")
+              find_path(PIO_INCLUDE_DIR NAMES pio.h PATHS "${search_path}" NO_DEFAULT_PATH)
+              if(PIO_INCLUDE_DIR)
+                  set(PIO_FOUND TRUE)
+                  message(STATUS "Found PIO include from ESMF path: ${PIO_INCLUDE_DIR}")
+                  break()
+              endif()
+          endif()
+      endforeach()
+  endif()
+endif()
+
 find_package(MPI REQUIRED)
 message(STATUS "Found MPI: ${MPI_CXX_VERSION}")
 
 # CDEPS is a required dependency for the hybrid ingestion layer.
 find_package(CDEPS QUIET)
+
+# Also look for cdeps in the current source dir if it was fetched
+if(NOT CDEPS_FOUND AND EXISTS "${CMAKE_BINARY_DIR}/_deps/cdeps-src")
+    set(CDEPS_FOUND TRUE)
+endif()
 
 if(NOT CDEPS_FOUND AND ACES_HAS_FORTRAN)
   message(STATUS "CDEPS not found on system, attempting to build from source using FetchContent...")
@@ -63,18 +88,21 @@ if(NOT CDEPS_FOUND AND ACES_HAS_FORTRAN)
   # CDEPS requires PIO
   find_package(PIO QUIET)
 
-  if(PIO_FOUND)
-    FetchContent_Declare(
-      cdeps
-      GIT_REPOSITORY https://github.com/ESCOMP/CDEPS.git
-      GIT_TAG        main
-    )
-    FetchContent_MakeAvailable(cdeps)
-    if(TARGET streams)
-       set(CDEPS_FOUND TRUE)
-       add_library(CDEPS::CDEPS ALIAS streams)
-       message(STATUS "CDEPS built from source successfully.")
-    endif()
+  # For FetchContent to work well with CDEPS, we may need to set some variables
+  set(PIO_ROOT ${PIO_INCLUDE_DIR}/..)
+
+  FetchContent_Declare(
+    cdeps
+    GIT_REPOSITORY https://github.com/ESCOMP/CDEPS.git
+    GIT_TAG        main
+  )
+  FetchContent_MakeAvailable(cdeps)
+  if(TARGET streams)
+      set(CDEPS_FOUND TRUE)
+      if(NOT TARGET CDEPS::CDEPS)
+          add_library(CDEPS::CDEPS ALIAS streams)
+      endif()
+      message(STATUS "CDEPS built from source successfully.")
   endif()
 endif()
 
