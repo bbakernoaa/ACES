@@ -1,5 +1,7 @@
 #include <Kokkos_Core.hpp>
+#include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <set>
 #include <vector>
@@ -204,29 +206,28 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     // 1. Meteorology/State from ESMF
     // We dynamically identify which fields are needed from ESMF.
     // These are fields used in 'species' definitions that are NOT provided by CDEPS.
-    std::vector<std::string> esmf_fields;
+    std::set<std::string> esmf_fields_set;
     std::set<std::string> cdeps_fields;
     for (const auto& s : data->config.cdeps_config.streams) cdeps_fields.insert(s.name);
 
     for (auto const& [species, layers] : data->config.species_layers) {
         for (const auto& layer : layers) {
             if (cdeps_fields.find(layer.field_name) == cdeps_fields.end()) {
-                esmf_fields.push_back(layer.field_name);
+                esmf_fields_set.insert(layer.field_name);
             }
-            for (const auto& sf : layer.scale_fields) {
-                if (cdeps_fields.find(sf) == cdeps_fields.end()) {
-                    esmf_fields.push_back(sf);
-                }
-            }
+
+            std::copy_if(
+                layer.scale_fields.begin(), layer.scale_fields.end(),
+                std::inserter(esmf_fields_set, esmf_fields_set.end()),
+                [&](const std::string& sf) { return cdeps_fields.find(sf) == cdeps_fields.end(); });
+
             if (!layer.mask_name.empty() &&
                 cdeps_fields.find(layer.mask_name) == cdeps_fields.end()) {
-                esmf_fields.push_back(layer.mask_name);
+                esmf_fields_set.insert(layer.mask_name);
             }
         }
     }
-    // Remove duplicates
-    std::sort(esmf_fields.begin(), esmf_fields.end());
-    esmf_fields.erase(std::unique(esmf_fields.begin(), esmf_fields.end()), esmf_fields.end());
+    std::vector<std::string> esmf_fields(esmf_fields_set.begin(), esmf_fields_set.end());
 
     data->ingestor.IngestMeteorology(importState, esmf_fields, data->import_state, nx, ny, nz);
 

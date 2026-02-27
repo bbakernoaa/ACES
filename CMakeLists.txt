@@ -61,16 +61,15 @@ if(NOT PIO_FOUND)
   set(PIO_ROOT "$ENV{PIO_ROOT}")
   if(NOT PIO_ROOT)
     # ESMF often links against NetCDF/PIO, we might find them in the same view
-      # We check common library lists in ESMF_LIBRARIES
       foreach(lib ${ESMF_LIBRARIES})
           if(lib MATCHES "^-L(.*)")
-              set(search_path "${CMAKE_MATCH_1}/../include")
-              find_path(PIO_INCLUDE_DIR NAMES pio.h PATHS "${search_path}" NO_DEFAULT_PATH)
-              if(PIO_INCLUDE_DIR)
+              set(search_path "${CMAKE_MATCH_1}")
+              if(EXISTS "${search_path}/../include/pio.h")
+                  set(PIO_ROOT "${search_path}/..")
+                  get_filename_component(PIO_ROOT "${PIO_ROOT}" ABSOLUTE)
                   set(PIO_FOUND TRUE)
-                  set(PIO_ROOT "${CMAKE_MATCH_1}/..")
                   set(ENV{PIO_ROOT} "${PIO_ROOT}")
-                  message(STATUS "Found PIO include from ESMF path: ${PIO_INCLUDE_DIR}")
+                  message(STATUS "Found PIO root from ESMF path: ${PIO_ROOT}")
                   break()
               endif()
           endif()
@@ -95,17 +94,17 @@ if(NOT CDEPS_FOUND AND ACES_HAS_FORTRAN)
   # CDEPS requires PIO
   find_package(PIO QUIET)
 
-  # For FetchContent to work well with CDEPS, we may need to set some variables
-  if(PIO_INCLUDE_DIR)
-    set(PIO_ROOT ${PIO_INCLUDE_DIR}/..)
-  endif()
+  if(PIO_FOUND)
+    # Set PIO_PATH for CDEPS find_package
+    set(PIO_PATH "${PIO_ROOT}")
+    set(ENV{PIO_PATH} "${PIO_ROOT}")
 
-  FetchContent_Declare(
-    cdeps
-    GIT_REPOSITORY https://github.com/ESCOMP/CDEPS.git
-    GIT_TAG        main
-  )
-  FetchContent_MakeAvailable(cdeps)
+    FetchContent_Declare(
+      cdeps
+      GIT_REPOSITORY https://github.com/ESCOMP/CDEPS.git
+      GIT_TAG        main
+    )
+    FetchContent_MakeAvailable(cdeps)
   if(TARGET streams)
       set(CDEPS_FOUND TRUE)
       if(NOT TARGET CDEPS::CDEPS)
