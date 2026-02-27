@@ -65,6 +65,8 @@ struct AcesConfig {
     std::map<std::string, std::vector<EmissionLayer>> species_layers;
     /// List of active physics schemes to be executed.
     std::vector<PhysicsSchemeConfig> physics_schemes;
+    /// List of diagnostic variable names to be written to disk.
+    std::vector<std::string> diagnostics;
     /// Configuration for CDEPS-inline data ingestion.
     AcesCdepsConfig cdeps_config;
 };

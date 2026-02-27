@@ -72,6 +72,13 @@ AcesConfig ParseConfig(const std::string& filename) {
         }
     }
 
+    // Parse diagnostics
+    if (root["diagnostics"]) {
+        for (auto const& diag_node : root["diagnostics"]) {
+            config.diagnostics.push_back(diag_node.as<std::string>());
+        }
+    }
+
     // Parse CDEPS configuration
     if (root["cdeps_inline_config"]) {
         auto cdeps_node = root["cdeps_inline_config"];

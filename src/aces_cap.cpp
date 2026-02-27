@@ -10,6 +10,7 @@
 #include "aces/aces_compute.hpp"
 #include "aces/aces_config.hpp"
 #include "aces/aces_data_ingestor.hpp"
+#include "aces/aces_diagnostics.hpp"
 #include "aces/aces_physics_factory.hpp"
 #include "aces/aces_state.hpp"
 #include "aces/aces_utils.hpp"
@@ -33,6 +34,7 @@ namespace aces {
  */
 struct AcesInternalData {
     AcesConfig config;  ///< Parsed ACES configuration.
+    std::unique_ptr<AcesDiagnosticManager> diagnostic_manager;  ///< Diagnostic manager.
     std::vector<std::unique_ptr<PhysicsScheme>>
         active_schemes;                    ///< List of active physics plugins.
     AcesImportState import_state;          ///< Input data views.
@@ -135,10 +137,18 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
         auto data = new AcesInternalData();
         data->kokkos_initialized_here = kokkos_initialized_here;
         data->config = ParseConfig("aces_config.yaml");
+        data->diagnostic_manager = std::make_unique<AcesDiagnosticManager>();
 
         // Instantiate requested physics schemes
         for (const auto& scheme_config : data->config.physics_schemes) {
-            data->active_schemes.push_back(PhysicsFactory::CreateScheme(scheme_config));
+            auto scheme = PhysicsFactory::CreateScheme(scheme_config);
+            if (scheme) {
+                scheme->Initialize(scheme_config.options, data->diagnostic_manager.get());
+                data->active_schemes.push_back(std::move(scheme));
+            } else {
+                std::cerr << "ACES_Initialize: Warning - Failed to create physics scheme: "
+                          << scheme_config.name << std::endl;
+            }
         }
 
         // Initialize CDEPS if configured
@@ -251,6 +261,10 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     for (auto& scheme : data->active_schemes) {
         scheme->Run(imp, exp);
     }
+
+    // Write diagnostics
+    // We use the last discovered field as a template for grid information
+    data->diagnostic_manager->WriteDiagnostics(data->config.diagnostics, field);
 
     // Sync results back to host space so the ESMF framework can see updated field data.
     for (auto& [name, dv] : exp.fields) {

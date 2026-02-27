@@ -1,0 +1,60 @@
+#include <gtest/gtest.h>
+#include <yaml-cpp/yaml.h>
+#include <Kokkos_Core.hpp>
+#include <cstring>
+#include <fstream>
+#include "aces/aces_diagnostics.hpp"
+#include "aces/physics_scheme.hpp"
+#include "ESMC.h"
+
+using namespace aces;
+
+class MockPhysicsScheme : public PhysicsScheme {
+public:
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override {
+        diag_ = diag_manager->RegisterDiagnostic("test_diag", 10, 10, 5);
+    }
+
+    void Run(AcesImportState& import_state, AcesExportState& export_state) override {
+        auto device_view = diag_.view_device();
+        Kokkos::deep_copy(device_view, 42.0);
+        diag_.modify_device();
+    }
+private:
+    DualView3D diag_;
+};
+
+TEST(DiagnosticsTest, RegistrationAndWriteback) {
+    if (!Kokkos::is_initialized()) Kokkos::initialize();
+
+    AcesDiagnosticManager diag_manager;
+    MockPhysicsScheme scheme;
+
+    YAML::Node config;
+    scheme.Initialize(config, &diag_manager);
+
+    AcesImportState import_state;
+    AcesExportState export_state;
+    scheme.Run(import_state, export_state);
+
+    std::vector<std::string> requested = {"test_diag"};
+
+    // Create a dummy template field for the test
+    ESMC_Field template_field;
+    template_field.ptr = (void*)0xDEADBEEF; // Mock pointer to satisfy null check
+
+    diag_manager.WriteDiagnostics(requested, template_field);
+
+    // Verify Kokkos sync
+    auto dv = diag_manager.RegisterDiagnostic("test_diag", 10, 10, 5);
+    auto host_view = dv.view_host();
+    EXPECT_DOUBLE_EQ(host_view(0, 0, 0), 42.0);
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    Kokkos::initialize(argc, argv);
+    int result = RUN_ALL_TESTS();
+    Kokkos::finalize();
+    return result;
+}
