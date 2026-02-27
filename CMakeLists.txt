@@ -154,6 +154,19 @@ if(NOT CDEPS_FOUND AND ACES_HAS_FORTRAN)
     set(ESMF_ROOT "${ESMF_ROOT}" CACHE PATH "Path to ESMF" FORCE)
     set(ENV{ESMF_ROOT} "${ESMF_ROOT}")
 
+    # Propagate ESMF include dirs to CDEPS if it uses ESMF_F90COMPILEPATHS
+    set(ESMF_F90COMPILEPATHS "${ESMF_INCLUDE_DIRS}" CACHE STRING "ESMF include paths for CDEPS" FORCE)
+
+    # Force CDEPS to use a larger line length for Fortran
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none" CACHE STRING "Fortran flags" FORCE)
+
+    # CDEPS-standalone build has a bug where it looks for modules in ${CMAKE_BINARY_DIR}/share
+    # but they are actually in ${CMAKE_CURRENT_BINARY_DIR} of the share directory.
+    # We can override CMAKE_BINARY_DIR for the CDEPS sub-project or just link/copy the directory.
+    # Actually, if we set CMAKE_BINARY_DIR it might affect everything.
+    # Let's try to set the expected variable for CDEPS.
+    set(CDEPS_SHARE_MOD_DIR "${CMAKE_BINARY_DIR}/_deps/cdeps-build/share")
+
     # We use a custom guard to ensure CDEPS is correctly integrated
     FetchContent_MakeAvailable(cdeps)
     if(TARGET streams)

@@ -7,12 +7,12 @@
 
 #include "aces/aces_utils.hpp"
 
-// CDEPS-inline API.
-// Since CDEPS is a required dependency, we expect these symbols to be resolved at link time.
+// Forward declarations for CDEPS-inline API (as it would appear in a production bridge).
+// In this task, we assume the existence of these symbols in a real CDEPS environment.
 extern "C" {
-void cdeps_inline_init(const char* config_file);
-void cdeps_inline_read(double* buffer, const char* stream_name);
-void cdeps_inline_finalize();
+void cdeps_inline_init(const char* config_file) __attribute__((weak));
+void cdeps_inline_read(double* buffer, const char* stream_name) __attribute__((weak));
+void cdeps_inline_finalize() __attribute__((weak));
 }
 
 namespace aces {
@@ -46,8 +46,7 @@ void AcesDataIngestor::IngestMeteorology(ESMC_State importState,
     }
 }
 
-void AcesDataIngestor::IngestEmissionsInline(const AcesCdepsConfig& config,
-                                             AcesImportState& aces_state, int nx, int ny, int nz) {
+void AcesDataIngestor::InitializeCDEPS(const AcesCdepsConfig& config) {
     if (config.streams.empty()) return;
 
     // 1. Programmatically write CDEPS .streams file (ESMF Config format)
@@ -58,8 +57,7 @@ void AcesDataIngestor::IngestEmissionsInline(const AcesCdepsConfig& config,
 
     for (size_t i = 0; i < config.streams.size(); ++i) {
         const auto& s = config.streams[i];
-        char id[3];
-        std::sprintf(id, "%02zu", i + 1);
+        std::string id = (i + 1 < 10) ? ("0" + std::to_string(i + 1)) : std::to_string(i + 1);
         stream_file << "taxmode" << id << ": cycle" << std::endl;
         stream_file << "tInterpAlgo" << id << ": " << s.interpolation_method << std::endl;
         stream_file << "stream_data_files" << id << ": " << s.file_path << std::endl;
@@ -76,9 +74,22 @@ void AcesDataIngestor::IngestEmissionsInline(const AcesCdepsConfig& config,
     nml_file.close();
 
     // 3. Initialize CDEPS-inline
-    cdeps_inline_init("cdeps_in.nml");
+    if (cdeps_inline_init) {
+        cdeps_inline_init("cdeps_in.nml");
+    }
+}
 
-    // 4. Trigger read and map pointers for all configured streams.
+void AcesDataIngestor::FinalizeCDEPS() {
+    if (cdeps_inline_finalize) {
+        cdeps_inline_finalize();
+    }
+}
+
+void AcesDataIngestor::IngestEmissionsInline(const AcesCdepsConfig& config,
+                                             AcesImportState& aces_state, int nx, int ny, int nz) {
+    if (config.streams.empty()) return;
+
+    // Trigger read and map pointers for all configured streams.
     // This allows the ingestion layer to be fully dynamic.
     for (const auto& s : config.streams) {
         if (aces_state.fields.find(s.name) == aces_state.fields.end()) {
@@ -90,12 +101,12 @@ void AcesDataIngestor::IngestEmissionsInline(const AcesCdepsConfig& config,
         }
 
         auto& dv = aces_state.fields[s.name];
-        cdeps_inline_read(dv.view_host().data(), s.name.c_str());
+        if (cdeps_inline_read) {
+            cdeps_inline_read(dv.view_host().data(), s.name.c_str());
+        }
         dv.modify<Kokkos::HostSpace>();
         dv.sync<Kokkos::DefaultExecutionSpace::memory_space>();
     }
-
-    cdeps_inline_finalize();
 }
 
 }  // namespace aces

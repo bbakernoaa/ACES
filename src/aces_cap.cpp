@@ -141,6 +141,9 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
             data->active_schemes.push_back(PhysicsFactory::CreateScheme(scheme_config));
         }
 
+        // Initialize CDEPS if configured
+        data->ingestor.InitializeCDEPS(data->config.cdeps_config);
+
         ESMC_GridCompSetInternalState(comp, data);
     }
 
@@ -271,6 +274,10 @@ void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState
         if (data_ptr) {
             auto data = static_cast<AcesInternalData*>(data_ptr);
             kokkos_initialized_here = data->kokkos_initialized_here;
+
+            // Finalize CDEPS
+            data->ingestor.FinalizeCDEPS();
+
             delete data;
         }
     }

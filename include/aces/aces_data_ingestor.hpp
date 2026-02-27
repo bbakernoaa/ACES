@@ -31,6 +31,18 @@ class AcesDataIngestor {
                            AcesImportState& aces_state, int nx, int ny, int nz);
 
     /**
+     * @brief Initializes the CDEPS-inline library.
+     * Writes required .streams and namelist files.
+     * @param config CDEPS configuration.
+     */
+    void InitializeCDEPS(const AcesCdepsConfig& config);
+
+    /**
+     * @brief Finalizes the CDEPS-inline library.
+     */
+    void FinalizeCDEPS();
+
+    /**
      * @brief Ingests emissions using CDEPS-inline.
      * @param config CDEPS configuration.
      * @param aces_state ACES state to be populated.
