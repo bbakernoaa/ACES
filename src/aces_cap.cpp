@@ -6,6 +6,7 @@
 #include "aces/aces.hpp"
 #include "aces/aces_compute.hpp"
 #include "aces/aces_config.hpp"
+#include "aces/aces_data_ingestor.hpp"
 #include "aces/aces_physics_factory.hpp"
 #include "aces/aces_state.hpp"
 #include "aces/aces_utils.hpp"
@@ -18,15 +19,6 @@
  * This file implements the ESMF-required entry points (Initialize, Run, Finalize)
  * and bridges the ESMF data structures with the Kokkos-based compute engine.
  */
-
-// Forward declarations for mock functions used in standalone driver.
-// Using weak symbols allows these to be optionally provided by a driver (like example_driver.cpp)
-// to bypass standard ESMF internal state management in environments where ESMC_GridCompCreate
-// fails.
-extern "C" {
-int Mock_ESMC_GridCompSetInternalState(ESMC_GridComp comp, void* data) __attribute__((weak));
-void* Mock_ESMC_GridCompGetInternalState(ESMC_GridComp comp, int* rc) __attribute__((weak));
-}
 
 namespace aces {
 
@@ -42,34 +34,10 @@ struct AcesInternalData {
         active_schemes;                    ///< List of active physics plugins.
     AcesImportState import_state;          ///< Input data views.
     AcesExportState export_state;          ///< Output emission views.
+    AcesDataIngestor ingestor;             ///< Hybrid data ingestor.
     bool kokkos_initialized_here = false;  ///< Flag to track if this component initialized Kokkos.
 };
 
-/**
- * @brief Helper to wrap internal state access to support both real ESMF and mock drivers.
- * @param comp ESMF Grid Component.
- * @param data Pointer to internal data.
- * @return ESMF success or failure.
- */
-static int InternalSetState(ESMC_GridComp comp, void* data) {
-    if (Mock_ESMC_GridCompSetInternalState) {
-        return Mock_ESMC_GridCompSetInternalState(comp, data);
-    }
-    return ESMC_GridCompSetInternalState(comp, data);
-}
-
-/**
- * @brief Helper to wrap internal state retrieval.
- * @param comp ESMF Grid Component.
- * @param rc Return code pointer.
- * @return Pointer to internal data.
- */
-static void* InternalGetState(ESMC_GridComp comp, int* rc) {
-    if (Mock_ESMC_GridCompGetInternalState) {
-        return Mock_ESMC_GridCompGetInternalState(comp, rc);
-    }
-    return ESMC_GridCompGetInternalState(comp, rc);
-}
 
 /**
  * @brief ESMF implementation of FieldResolver.
@@ -101,6 +69,30 @@ class EsmfFieldResolver : public FieldResolver {
         int rc = ESMC_StateGetField(exportState, name.c_str(), &field);
         if (rc != ESMF_SUCCESS) return UnmanagedHostView3D();
         return WrapESMCField(field, nx, ny, nz);
+    }
+};
+
+/**
+ * @brief FieldResolver that pulls from the unified AcesImportState and AcesExportState.
+ */
+class AcesStateResolver : public FieldResolver {
+    const AcesImportState& import_state;
+    const AcesExportState& export_state;
+
+   public:
+    AcesStateResolver(const AcesImportState& imp, const AcesExportState& exp)
+        : import_state(imp), export_state(exp) {}
+
+    UnmanagedHostView3D ResolveImport(const std::string& name, int nx, int ny, int nz) override {
+        if (name == "temperature") return import_state.temperature.view_host();
+        if (name == "wind_speed_10m") return import_state.wind_speed_10m.view_host();
+        if (name == "base_anthropogenic_nox") return import_state.base_anthropogenic_nox.view_host();
+        return UnmanagedHostView3D();
+    }
+
+    UnmanagedHostView3D ResolveExport(const std::string& name, int nx, int ny, int nz) override {
+        if (name == "total_nox_emissions") return export_state.total_nox_emissions.view_host();
+        return UnmanagedHostView3D();
     }
 };
 
@@ -143,7 +135,7 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
             data->active_schemes.push_back(PhysicsFactory::CreateScheme(scheme_config));
         }
 
-        InternalSetState(comp, data);
+        ESMC_GridCompSetInternalState(comp, data);
     }
 
     if (rc) *rc = ESMF_SUCCESS;
@@ -162,7 +154,7 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     }
 
     int rc_internal;
-    void* data_ptr = InternalGetState(comp, &rc_internal);
+    void* data_ptr = ESMC_GridCompGetInternalState(comp, &rc_internal);
     if (!data_ptr) {
         std::cerr << "ACES_Run Error: Internal state not found." << std::endl;
         if (rc) *rc = -1;
@@ -197,17 +189,20 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
                   << "x" << ny << "x" << nz << std::endl;
     }
 
+    // Hybrid data ingestion
+    data->ingestor.IngestMeteorology(importState, data->import_state, nx, ny, nz);
+    if (!data->config.cdeps_config.streams.empty()) {
+        data->ingestor.IngestEmissionsInline(data->config.cdeps_config, data->import_state, nx, ny,
+                                             nz);
+    }
+
     // Run core compute engine (layer addition/replacement)
-    EsmfFieldResolver resolver(importState, exportState);
+    AcesStateResolver resolver(data->import_state, data->export_state);
     ComputeEmissions(data->config, resolver, nx, ny, nz);
 
-    // Lazily initialize persistent DualViews for physics plugins.
+    // Lazily initialize persistent DualViews for physics plugins and export state.
     // This avoids per-timestep allocation overhead.
     if (data->export_state.total_nox_emissions.view_host().data() == nullptr) {
-        data->import_state.temperature = GetDualView(importState, "temperature", nx, ny, nz);
-        data->import_state.wind_speed_10m = GetDualView(importState, "wind_speed_10m", nx, ny, nz);
-        data->import_state.base_anthropogenic_nox =
-            GetDualView(importState, "base_anthropogenic_nox", nx, ny, nz);
         data->export_state.total_nox_emissions =
             GetDualView(exportState, "total_nox_emissions", nx, ny, nz);
     }
@@ -236,7 +231,7 @@ void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState
     bool kokkos_initialized_here = false;
     if (comp.ptr != nullptr) {
         int rc_internal;
-        void* data_ptr = InternalGetState(comp, &rc_internal);
+        void* data_ptr = ESMC_GridCompGetInternalState(comp, &rc_internal);
         if (data_ptr) {
             auto data = static_cast<AcesInternalData*>(data_ptr);
             kokkos_initialized_here = data->kokkos_initialized_here;

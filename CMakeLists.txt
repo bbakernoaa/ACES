@@ -38,9 +38,6 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-# ESMF
-option(ACES_USE_MOCK_ESMF "Use internal mock ESMF if system ESMF not found" ON)
-
 # Optional Fortran support
 include(CheckLanguage)
 check_language(Fortran)
@@ -51,29 +48,13 @@ else()
   message(WARNING "Fortran compiler not found. Fortran features will be disabled.")
 endif()
 
-find_package(ESMF QUIET)
+find_package(ESMF REQUIRED)
+message(STATUS "Found ESMF: ${ESMF_VERSION}")
 
-if(ESMF_FOUND)
-  message(STATUS "Found ESMF: ${ESMF_VERSION}")
+find_package(MPI REQUIRED)
+message(STATUS "Found MPI: ${MPI_CXX_VERSION}")
 
-  # Real ESMF usually requires MPI because ESMC.h includes mpi.h.
-  find_package(MPI REQUIRED)
-  if(MPI_FOUND)
-    message(STATUS "Found MPI: ${MPI_CXX_VERSION}")
-  endif()
-
-else()
-  if(ACES_USE_MOCK_ESMF)
-    message(STATUS "ESMF not found, using internal mock.")
-    add_subdirectory(externals/esmf_mock)
-    target_compile_definitions(esmf_mock PUBLIC ACES_USING_MOCK_ESMF)
-    if(NOT TARGET ESMF::ESMF)
-        add_library(ESMF::ESMF ALIAS esmf_mock)
-    endif()
-  else()
-    message(FATAL_ERROR "ESMF not found and mock is disabled.")
-  endif()
-endif()
+find_package(CDEPS REQUIRED)
 
 # --- ACES Library ---
 
@@ -83,6 +64,7 @@ set(ACES_SRCS
   src/aces_compute.cpp
   src/aces_physics_factory.cpp
   src/physics/aces_native_example.cpp
+  src/io/aces_data_ingestor.cpp
 )
 
 if(ACES_HAS_FORTRAN)
@@ -107,6 +89,7 @@ target_link_libraries(aces PUBLIC
   Kokkos::kokkos
   ESMF::ESMF
   yaml-cpp
+  CDEPS::CDEPS
 )
 
 if(MPI_FOUND)
@@ -122,6 +105,16 @@ add_executable(test_aces_cap
 )
 
 target_link_libraries(test_aces_cap
+  PRIVATE
+  aces
+  GTest::gtest_main
+)
+
+add_executable(test_aces_ingestor
+  tests/test_aces_ingestor.cpp
+)
+
+target_link_libraries(test_aces_ingestor
   PRIVATE
   aces
   GTest::gtest_main
@@ -157,19 +150,18 @@ target_link_libraries(test_physics
   GTest::gtest_main
 )
 
-if(NOT ACES_USE_MOCK_ESMF)
-  add_executable(example_driver
-    tests/example_driver.cpp
-  )
+add_executable(example_driver
+  tests/example_driver.cpp
+)
 
-  target_link_libraries(example_driver
-    PRIVATE
-    aces
-  )
-endif()
+target_link_libraries(example_driver
+  PRIVATE
+  aces
+)
 
 include(GoogleTest)
 gtest_discover_tests(test_aces_cap)
 gtest_discover_tests(test_aces_utils)
 gtest_discover_tests(test_aces_compute)
 gtest_discover_tests(test_physics)
+gtest_discover_tests(test_aces_ingestor)
