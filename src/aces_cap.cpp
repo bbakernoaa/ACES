@@ -196,10 +196,8 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     // Lazily initialize persistent DualViews for export state.
     for (auto const& [species, layers] : data->config.species_layers) {
         std::string export_name = "total_" + species + "_emissions";
-        if (data->export_state.fields.find(export_name) == data->export_state.fields.end()) {
-            data->export_state.fields[export_name] =
-                GetDualView(exportState, export_name, nx, ny, nz);
-        }
+        data->export_state.fields.try_emplace(export_name,
+                                              GetDualView(exportState, export_name, nx, ny, nz));
     }
 
     // Hybrid data ingestion:

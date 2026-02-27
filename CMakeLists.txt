@@ -8,6 +8,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+# Allow find_package to use <PackageName>_ROOT variables
+if(POLICY CMP0074)
+  cmake_policy(SET CMP0074 NEW)
+endif()
+
 # --- Dependencies ---
 
 include(FetchContent)
@@ -63,6 +68,8 @@ if(NOT PIO_FOUND)
               find_path(PIO_INCLUDE_DIR NAMES pio.h PATHS "${search_path}" NO_DEFAULT_PATH)
               if(PIO_INCLUDE_DIR)
                   set(PIO_FOUND TRUE)
+                  set(PIO_ROOT "${CMAKE_MATCH_1}/..")
+                  set(ENV{PIO_ROOT} "${PIO_ROOT}")
                   message(STATUS "Found PIO include from ESMF path: ${PIO_INCLUDE_DIR}")
                   break()
               endif()

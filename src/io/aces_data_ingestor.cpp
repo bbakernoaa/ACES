@@ -34,9 +34,8 @@ void AcesDataIngestor::IngestMeteorology(ESMC_State importState,
                                          const std::vector<std::string>& field_names,
                                          AcesImportState& aces_state, int nx, int ny, int nz) {
     for (const auto& name : field_names) {
-        if (aces_state.fields.find(name) == aces_state.fields.end()) {
-            aces_state.fields[name] = CreateDualViewFromESMF(importState, name.c_str(), nx, ny, nz);
-        }
+        aces_state.fields.try_emplace(
+            name, CreateDualViewFromESMF(importState, name.c_str(), nx, ny, nz));
 
         // Sync host to device to ensure Kokkos kernels see updated ESMF data
         auto& dv = aces_state.fields[name];
@@ -87,7 +86,7 @@ void AcesDataIngestor::IngestEmissionsInline(const AcesCdepsConfig& config,
                 "host_" + s.name, nx, ny, nz);
             Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> device_view(
                 "device_" + s.name, nx, ny, nz);
-            aces_state.fields[s.name] = DualView3D(device_view, host_view);
+            aces_state.fields.try_emplace(s.name, device_view, host_view);
         }
 
         auto& dv = aces_state.fields[s.name];
