@@ -18,6 +18,10 @@ namespace aces {
 void NativePhysicsExample::Initialize(const YAML::Node& config,
                                       AcesDiagnosticManager* diag_manager) {
     std::cout << "NativePhysicsExample: Initialized." << std::endl;
+    if (diag_manager) {
+        // Register an example diagnostic variable
+        diag_manager->RegisterDiagnostic("native_example_diag", 1, 1, 1);
+    }
 }
 
 /**
