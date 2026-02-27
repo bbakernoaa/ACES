@@ -74,6 +74,16 @@ class EsmfFieldResolver : public FieldResolver {
         if (rc != ESMF_SUCCESS) return UnmanagedHostView3D();
         return WrapESMCField(field, nx, ny, nz);
     }
+
+    Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
+    ResolveImportDevice(const std::string& name, int nx, int ny, int nz) override {
+        return Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>();
+    }
+
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveExportDevice(
+        const std::string& name, int nx, int ny, int nz) override {
+        return Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>();
+    }
 };
 
 /**
@@ -101,6 +111,24 @@ class AcesStateResolver : public FieldResolver {
             return it->second.view_host();
         }
         return UnmanagedHostView3D();
+    }
+
+    Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
+    ResolveImportDevice(const std::string& name, int nx, int ny, int nz) override {
+        auto it = import_state.fields.find(name);
+        if (it != import_state.fields.end()) {
+            return it->second.view_device();
+        }
+        return Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>();
+    }
+
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveExportDevice(
+        const std::string& name, int nx, int ny, int nz) override {
+        auto it = export_state.fields.find(name);
+        if (it != export_state.fields.end()) {
+            return it->second.view_device();
+        }
+        return Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>();
     }
 };
 
@@ -242,6 +270,7 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     }
     std::vector<std::string> esmf_fields(esmf_fields_set.begin(), esmf_fields_set.end());
 
+    Kokkos::Profiling::pushRegion("ACES_DataIngestion");
     data->ingestor.IngestMeteorology(importState, esmf_fields, data->import_state, nx, ny, nz);
 
     // 2. Emissions from CDEPS
@@ -249,21 +278,27 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
         data->ingestor.IngestEmissionsInline(data->config.cdeps_config, data->import_state, nx, ny,
                                              nz);
     }
+    Kokkos::Profiling::popRegion();
 
     // Run core compute engine (layer addition/replacement)
+    Kokkos::Profiling::pushRegion("ACES_StackingEngine");
     AcesStateResolver resolver(data->import_state, data->export_state);
     ComputeEmissions(data->config, resolver, nx, ny, nz);
+    Kokkos::Profiling::popRegion();
 
     auto& imp = data->import_state;
     auto& exp = data->export_state;
 
     // Run active physics plugins (Sea Salt, Dust, etc.)
+    Kokkos::Profiling::pushRegion("ACES_PhysicsExtensions");
     for (auto& scheme : data->active_schemes) {
         scheme->Run(imp, exp);
     }
+    Kokkos::Profiling::popRegion();
 
     // Write diagnostics
     // We use the last discovered field as a template for grid information
+    Kokkos::Profiling::pushRegion("ACES_Writeback");
     data->diagnostic_manager->WriteDiagnostics(data->config.diagnostics, field);
 
     // Sync results back to host space so the ESMF framework can see updated field data.
@@ -272,6 +307,7 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
             dv.sync<Kokkos::HostSpace>();
         }
     }
+    Kokkos::Profiling::popRegion();
 
     if (rc) *rc = ESMF_SUCCESS;
 }
@@ -291,6 +327,13 @@ void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState
 
             // Finalize CDEPS
             data->ingestor.FinalizeCDEPS();
+
+            // Clear active schemes and states to ensure Views are destroyed
+            // before Kokkos::finalize is called.
+            data->active_schemes.clear();
+            data->import_state.fields.clear();
+            data->export_state.fields.clear();
+            data->diagnostic_manager.reset();
 
             delete data;
         }
