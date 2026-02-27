@@ -1,6 +1,7 @@
 #include "aces/physics/aces_fortran_bridge.hpp"
-#include <iostream>
+
 #include <Kokkos_Core.hpp>
+#include <iostream>
 
 /**
  * @file aces_fortran_bridge.cpp
@@ -9,7 +10,7 @@
 
 // Declare the external Fortran function (implemented in legacy_fortran.F90)
 extern "C" {
-    void run_legacy_fortran(double* temp, double* wind, double* nox, int nx, int ny, int nz);
+void run_legacy_fortran(double* temp, double* wind, double* nox, int nx, int ny, int nz);
 }
 
 namespace aces {
@@ -60,4 +61,4 @@ void FortranBridgeExample::Run(AcesImportState& import_state, AcesExportState& e
     std::cout << "FortranBridgeExample: Execution complete." << std::endl;
 }
 
-} // namespace aces
+}  // namespace aces

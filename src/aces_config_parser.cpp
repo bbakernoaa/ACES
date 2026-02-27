@@ -1,6 +1,8 @@
-#include "aces/aces_config.hpp"
 #include <yaml-cpp/yaml.h>
+
 #include <iostream>
+
+#include "aces/aces_config.hpp"
 
 /**
  * @file aces_config_parser.cpp
@@ -62,4 +64,4 @@ AcesConfig ParseConfig(const std::string& filename) {
     return config;
 }
 
-} // namespace aces
+}  // namespace aces

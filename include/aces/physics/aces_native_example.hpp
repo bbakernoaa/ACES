@@ -18,7 +18,7 @@ namespace aces {
  * using Kokkos kernels for high performance on both CPU and GPU.
  */
 class NativePhysicsExample : public PhysicsScheme {
-public:
+   public:
     /**
      * @brief Default constructor.
      */
@@ -43,6 +43,6 @@ public:
     void Run(AcesImportState& import_state, AcesExportState& export_state) override;
 };
 
-} // namespace aces
+}  // namespace aces
 
-#endif // ACES_NATIVE_EXAMPLE_HPP
+#endif  // ACES_NATIVE_EXAMPLE_HPP

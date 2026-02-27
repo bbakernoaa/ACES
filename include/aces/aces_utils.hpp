@@ -30,6 +30,6 @@ inline UnmanagedHostView3D WrapESMCField(ESMC_Field field, int dim1, int dim2, i
     return UnmanagedHostView3D(dataPtr, dim1, dim2, dim3);
 }
 
-} // namespace aces
+}  // namespace aces
 
-#endif // ACES_UTILS_HPP
+#endif  // ACES_UTILS_HPP

@@ -1,9 +1,10 @@
-#include "ESMC.h"
-#include <iostream>
-#include <vector>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
+#include <vector>
+
+#include "ESMC.h"
 
 /**
  * @file example_driver.cpp
@@ -16,9 +17,12 @@
 
 // Explicitly declare ACES component entry points (normally provided by NUOPC/ESMF)
 extern "C" {
-void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
-void ACES_Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
-void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
+void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState,
+                     ESMC_Clock* clock, int* rc);
+void ACES_Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock,
+              int* rc);
+void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState,
+                   ESMC_Clock* clock, int* rc);
 }
 
 // Global registry to simulate ESMF internal state storage.
@@ -57,7 +61,8 @@ void* Mock_ESMC_GridCompGetInternalState(ESMC_GridComp comp, int* rc) {
  * @param ny Y dimension size.
  * @param nz Z dimension size (levels).
  */
-void Atmosphere_ProvideData(ESMC_Field f_temp, ESMC_Field f_wind, int step, int nx, int ny, int nz) {
+void Atmosphere_ProvideData(ESMC_Field f_temp, ESMC_Field f_wind, int step, int nx, int ny,
+                            int nz) {
     int rc;
     double* temp_ptr = (double*)ESMC_FieldGetPtr(f_temp, 0, &rc);
     double* wind_ptr = (double*)ESMC_FieldGetPtr(f_wind, 0, &rc);
@@ -119,7 +124,8 @@ int main(int argc, char** argv) {
 
     // 5. Create ESMF Fields and add them to the states
     auto createField = [&](ESMC_State state, const char* name) {
-        ESMC_Field field = ESMC_FieldCreateGridTypeKind(grid, ESMC_TYPEKIND_R8, ESMC_STAGGERLOC_CENTER, NULL, NULL, NULL, name, &rc);
+        ESMC_Field field = ESMC_FieldCreateGridTypeKind(
+            grid, ESMC_TYPEKIND_R8, ESMC_STAGGERLOC_CENTER, NULL, NULL, NULL, name, &rc);
         ESMC_StateAddField(state, field);
         return field;
     };
@@ -140,10 +146,13 @@ int main(int argc, char** argv) {
 
     // 7. Initialize ACES component
     ESMC_GridComp acesComp;
-    acesComp.ptr = (void*)0x1; // Standalone dummy handle used for state tracking
+    acesComp.ptr = (void*)0x1;  // Standalone dummy handle used for state tracking
 
     // Setup component configuration file
-    std::system("echo 'species:\n  nox:\n    - field: \"base_anthropogenic_nox\"\n      operation: \"add\"\n      scale: 1.0\n    - field: \"temperature\"\n      operation: \"add\"\n      scale: 1.0e-12\nphysics_schemes: []' > aces_config.yaml");
+    std::system(
+        "echo 'species:\n  nox:\n    - field: \"base_anthropogenic_nox\"\n      operation: "
+        "\"add\"\n      scale: 1.0\n    - field: \"temperature\"\n      operation: \"add\"\n      "
+        "scale: 1.0e-12\nphysics_schemes: []' > aces_config.yaml");
 
     std::cout << "[Driver] Initializing ACES component..." << std::endl;
     ACES_Initialize(acesComp, importState, exportState, &clock, &rc);
@@ -171,7 +180,8 @@ int main(int argc, char** argv) {
         char filename[64];
         std::sprintf(filename, "output_step_%d.nc", step);
         std::cout << "  [Driver] Writing diagnostic to " << filename << std::endl;
-        ESMC_FieldWrite(f_total, filename, "total_nox", 1, ESMC_FILESTATUS_REPLACE, step + 1, ESMF_IOFMT_NETCDF);
+        ESMC_FieldWrite(f_total, filename, "total_nox", 1, ESMC_FILESTATUS_REPLACE, step + 1,
+                        ESMF_IOFMT_NETCDF);
 
         // STEP D: Advance simulation clock
         ESMC_ClockAdvance(clock);

@@ -1,7 +1,9 @@
 #include "aces/aces_physics_factory.hpp"
-#include "aces/physics/aces_native_example.hpp"
-#include "aces/physics/aces_fortran_bridge.hpp"
+
 #include <iostream>
+
+#include "aces/physics/aces_fortran_bridge.hpp"
+#include "aces/physics/aces_native_example.hpp"
 
 /**
  * @file aces_physics_factory.cpp
@@ -37,4 +39,4 @@ std::unique_ptr<PhysicsScheme> PhysicsFactory::CreateScheme(const PhysicsSchemeC
     return scheme;
 }
 
-} // namespace aces
+}  // namespace aces

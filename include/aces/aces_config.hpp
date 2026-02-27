@@ -6,10 +6,11 @@
  * @brief Configuration structures and parser for ACES.
  */
 
+#include <yaml-cpp/yaml.h>
+
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-#include <yaml-cpp/yaml.h>
 
 namespace aces {
 
@@ -18,9 +19,9 @@ namespace aces {
  * @brief Configuration for a physics scheme.
  */
 struct PhysicsSchemeConfig {
-    std::string name;     ///< Name of the physics scheme.
-    std::string language; ///< Implementation language (e.g., "cpp", "fortran").
-    YAML::Node options;   ///< Scheme-specific options.
+    std::string name;      ///< Name of the physics scheme.
+    std::string language;  ///< Implementation language (e.g., "cpp", "fortran").
+    YAML::Node options;    ///< Scheme-specific options.
 };
 
 /**
@@ -28,10 +29,10 @@ struct PhysicsSchemeConfig {
  * @brief Represents a single layer of emissions to be applied.
  */
 struct EmissionLayer {
-    std::string operation; ///< Layer operation: "add" or "replace".
-    std::string field_name; ///< Name of the base field in the ESMF State.
-    std::string mask_name;  ///< Name of the geographical mask field (optional).
-    double scale = 1.0;     ///< Scaling factor for this layer.
+    std::string operation;   ///< Layer operation: "add" or "replace".
+    std::string field_name;  ///< Name of the base field in the ESMF State.
+    std::string mask_name;   ///< Name of the geographical mask field (optional).
+    double scale = 1.0;      ///< Scaling factor for this layer.
 };
 
 /**
@@ -53,6 +54,6 @@ struct AcesConfig {
  */
 AcesConfig ParseConfig(const std::string& filename);
 
-} // namespace aces
+}  // namespace aces
 
-#endif // ACES_CONFIG_HPP
+#endif  // ACES_CONFIG_HPP

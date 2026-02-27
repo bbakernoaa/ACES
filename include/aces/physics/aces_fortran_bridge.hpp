@@ -19,7 +19,7 @@ namespace aces {
  * raw Fortran-compatible pointers.
  */
 class FortranBridgeExample : public PhysicsScheme {
-public:
+   public:
     /**
      * @brief Default constructor.
      */
@@ -44,6 +44,6 @@ public:
     void Run(AcesImportState& import_state, AcesExportState& export_state) override;
 };
 
-} // namespace aces
+}  // namespace aces
 
-#endif // ACES_FORTRAN_BRIDGE_HPP
+#endif  // ACES_FORTRAN_BRIDGE_HPP

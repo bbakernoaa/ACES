@@ -1,14 +1,16 @@
 #include <gtest/gtest.h>
+
 #include <Kokkos_Core.hpp>
-#include "aces/aces_state.hpp"
+
 #include "aces/aces_physics_factory.hpp"
-#include "aces/physics/aces_native_example.hpp"
+#include "aces/aces_state.hpp"
 #include "aces/physics/aces_fortran_bridge.hpp"
+#include "aces/physics/aces_native_example.hpp"
 
 using namespace aces;
 
 class PhysicsTest : public ::testing::Test {
-protected:
+   protected:
     static void SetUpTestSuite() {
         if (!Kokkos::is_initialized()) Kokkos::initialize();
     }
@@ -58,7 +60,7 @@ TEST_F(PhysicsTest, NativeSchemeTest) {
 
     export_state.total_nox_emissions.sync<Kokkos::HostSpace>();
     auto hv = export_state.total_nox_emissions.view_host();
-    EXPECT_DOUBLE_EQ(hv(0, 0, 0), 2.0); // 0.0 + 1.0 * 2.0
+    EXPECT_DOUBLE_EQ(hv(0, 0, 0), 2.0);  // 0.0 + 1.0 * 2.0
 }
 
 TEST_F(PhysicsTest, FortranSchemeTest) {
@@ -71,12 +73,14 @@ TEST_F(PhysicsTest, FortranSchemeTest) {
 
     export_state.total_nox_emissions.sync<Kokkos::HostSpace>();
     auto hv = export_state.total_nox_emissions.view_host();
-    EXPECT_DOUBLE_EQ(hv(0, 0, 0), 1.0); // 0.0 + 1.0
+    EXPECT_DOUBLE_EQ(hv(0, 0, 0), 1.0);  // 0.0 + 1.0
 }
 
 TEST_F(PhysicsTest, CombinedSchemesTest) {
-    PhysicsSchemeConfig config1; config1.name = "native_example";
-    PhysicsSchemeConfig config2; config2.name = "fortran_bridge_example";
+    PhysicsSchemeConfig config1;
+    config1.name = "native_example";
+    PhysicsSchemeConfig config2;
+    config2.name = "fortran_bridge_example";
 
     auto scheme1 = PhysicsFactory::CreateScheme(config1);
     auto scheme2 = PhysicsFactory::CreateScheme(config2);

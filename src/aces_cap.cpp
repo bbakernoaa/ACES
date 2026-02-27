@@ -1,14 +1,15 @@
+#include <Kokkos_Core.hpp>
+#include <iostream>
+#include <memory>
+#include <vector>
+
 #include "aces/aces.hpp"
+#include "aces/aces_compute.hpp"
+#include "aces/aces_config.hpp"
+#include "aces/aces_physics_factory.hpp"
 #include "aces/aces_state.hpp"
 #include "aces/aces_utils.hpp"
-#include "aces/aces_config.hpp"
-#include "aces/aces_compute.hpp"
-#include "aces/aces_physics_factory.hpp"
 #include "aces/physics_scheme.hpp"
-#include <iostream>
-#include <vector>
-#include <memory>
-#include <Kokkos_Core.hpp>
 
 /**
  * @file aces_cap.cpp
@@ -20,7 +21,8 @@
 
 // Forward declarations for mock functions used in standalone driver.
 // Using weak symbols allows these to be optionally provided by a driver (like example_driver.cpp)
-// to bypass standard ESMF internal state management in environments where ESMC_GridCompCreate fails.
+// to bypass standard ESMF internal state management in environments where ESMC_GridCompCreate
+// fails.
 extern "C" {
 int Mock_ESMC_GridCompSetInternalState(ESMC_GridComp comp, void* data) __attribute__((weak));
 void* Mock_ESMC_GridCompGetInternalState(ESMC_GridComp comp, int* rc) __attribute__((weak));
@@ -35,11 +37,12 @@ namespace aces {
  * redundant allocations and re-parsing of configuration on every timestep.
  */
 struct AcesInternalData {
-    AcesConfig config;                                    ///< Parsed ACES configuration.
-    std::vector<std::unique_ptr<PhysicsScheme>> active_schemes; ///< List of active physics plugins.
-    AcesImportState import_state;                         ///< Input data views.
-    AcesExportState export_state;                         ///< Output emission views.
-    bool kokkos_initialized_here = false;                 ///< Flag to track if this component initialized Kokkos.
+    AcesConfig config;  ///< Parsed ACES configuration.
+    std::vector<std::unique_ptr<PhysicsScheme>>
+        active_schemes;                    ///< List of active physics plugins.
+    AcesImportState import_state;          ///< Input data views.
+    AcesExportState export_state;          ///< Output emission views.
+    bool kokkos_initialized_here = false;  ///< Flag to track if this component initialized Kokkos.
 };
 
 /**
@@ -77,9 +80,8 @@ class EsmfFieldResolver : public FieldResolver {
     ESMC_State importState;
     ESMC_State exportState;
 
-public:
-    EsmfFieldResolver(ESMC_State imp, ESMC_State exp)
-        : importState(imp), exportState(exp) {}
+   public:
+    EsmfFieldResolver(ESMC_State imp, ESMC_State exp) : importState(imp), exportState(exp) {}
 
     /**
      * @brief Resolves an import field by name and wraps it in a Kokkos View.
@@ -114,14 +116,16 @@ static DualView3D GetDualView(ESMC_State state, const std::string& name, int nx,
         return DualView3D();
     }
     UnmanagedHostView3D host_view = WrapESMCField(field, nx, ny, nz);
-    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> device_view("device_" + name, nx, ny, nz);
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> device_view(
+        "device_" + name, nx, ny, nz);
     return DualView3D(device_view, host_view);
 }
 
 /**
  * @brief Internal implementation of Initialize phase.
  */
-void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
+void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState,
+                ESMC_Clock* clock, int* rc) {
     bool kokkos_initialized_here = false;
     if (!Kokkos::is_initialized()) {
         Kokkos::initialize();
@@ -148,7 +152,8 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
 /**
  * @brief Internal implementation of Run phase.
  */
-void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
+void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock,
+         int* rc) {
     std::cout << "ACES_Run: Executing." << std::endl;
 
     if (comp.ptr == nullptr) {
@@ -185,8 +190,11 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
         nz = ubound[2] - lbound[2] + 1;
     } else {
         // Fallback for cases with empty configuration or missing expected fields
-        nx = 360; ny = 180; nz = 72;
-        std::cerr << "ACES_Run: Warning - Could not discover grid dimensions, using defaults " << nx << "x" << ny << "x" << nz << std::endl;
+        nx = 360;
+        ny = 180;
+        nz = 72;
+        std::cerr << "ACES_Run: Warning - Could not discover grid dimensions, using defaults " << nx
+                  << "x" << ny << "x" << nz << std::endl;
     }
 
     // Run core compute engine (layer addition/replacement)
@@ -198,8 +206,10 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     if (data->export_state.total_nox_emissions.view_host().data() == nullptr) {
         data->import_state.temperature = GetDualView(importState, "temperature", nx, ny, nz);
         data->import_state.wind_speed_10m = GetDualView(importState, "wind_speed_10m", nx, ny, nz);
-        data->import_state.base_anthropogenic_nox = GetDualView(importState, "base_anthropogenic_nox", nx, ny, nz);
-        data->export_state.total_nox_emissions = GetDualView(exportState, "total_nox_emissions", nx, ny, nz);
+        data->import_state.base_anthropogenic_nox =
+            GetDualView(importState, "base_anthropogenic_nox", nx, ny, nz);
+        data->export_state.total_nox_emissions =
+            GetDualView(exportState, "total_nox_emissions", nx, ny, nz);
     }
 
     auto& imp = data->import_state;
@@ -221,7 +231,8 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
 /**
  * @brief Internal implementation of Finalize phase.
  */
-void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
+void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock,
+              int* rc) {
     bool kokkos_initialized_here = false;
     if (comp.ptr != nullptr) {
         int rc_internal;
@@ -242,28 +253,31 @@ void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState
     if (rc) *rc = ESMF_SUCCESS;
 }
 
-} // namespace aces
+}  // namespace aces
 
 extern "C" {
 
 /**
  * @brief ESMF Initialize entry point.
  */
-void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
+void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState,
+                     ESMC_Clock* clock, int* rc) {
     aces::Initialize(comp, importState, exportState, clock, rc);
 }
 
 /**
  * @brief ESMF Run entry point.
  */
-void ACES_Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
+void ACES_Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock,
+              int* rc) {
     aces::Run(comp, importState, exportState, clock, rc);
 }
 
 /**
  * @brief ESMF Finalize entry point.
  */
-void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc) {
+void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState,
+                   ESMC_Clock* clock, int* rc) {
     aces::Finalize(comp, importState, exportState, clock, rc);
 }
 
@@ -279,4 +293,4 @@ void ACES_SetServices(ESMC_GridComp comp, int* rc) {
     std::cout << "ACES_SetServices: Services set." << std::endl;
 }
 
-} // extern "C"
+}  // extern "C"

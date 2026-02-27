@@ -1,4 +1,5 @@
 #include "aces/physics/aces_native_example.hpp"
+
 #include <Kokkos_Core.hpp>
 #include <iostream>
 
@@ -37,13 +38,14 @@ void NativePhysicsExample::Run(AcesImportState& import_state, AcesExportState& e
     if (nx == 0 || ny == 0 || nz == 0) return;
 
     // Dispatch the computational kernel to the default execution space (e.g. GPU)
-    Kokkos::parallel_for("NativePhysicsExampleKernel",
-        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0}, {nx, ny, nz}),
+    Kokkos::parallel_for(
+        "NativePhysicsExampleKernel",
+        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0},
+                                                                              {nx, ny, nz}),
         KOKKOS_LAMBDA(int i, int j, int k) {
             // Apply a dummy calculation
             total_nox(i, j, k) += base_nox(i, j, k) * 2.0;
-        }
-    );
+        });
     // Fence to ensure completion before returning control
     Kokkos::fence();
 
@@ -51,4 +53,4 @@ void NativePhysicsExample::Run(AcesImportState& import_state, AcesExportState& e
     export_state.total_nox_emissions.modify_device();
 }
 
-} // namespace aces
+}  // namespace aces

@@ -22,7 +22,8 @@ namespace aces {
  * @param clock The ESMF Clock.
  * @param rc Return code pointer.
  */
-void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
+void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState,
+                ESMC_Clock* clock, int* rc);
 
 /**
  * @brief Runs the ACES component.
@@ -35,7 +36,8 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
  * @param clock The ESMF Clock.
  * @param rc Return code pointer.
  */
-void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
+void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock,
+         int* rc);
 
 /**
  * @brief Finalizes the ACES component.
@@ -48,8 +50,9 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
  * @param clock The ESMF Clock.
  * @param rc Return code pointer.
  */
-void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock, int* rc);
+void Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock,
+              int* rc);
 
-} // namespace aces
+}  // namespace aces
 
-#endif // ACES_HPP
+#endif  // ACES_HPP
