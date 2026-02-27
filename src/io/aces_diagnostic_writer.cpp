@@ -1,8 +1,7 @@
-#include "aces/aces_diagnostics.hpp"
-
 #include <iostream>
 
 #include "ESMC.h"
+#include "aces/aces_diagnostics.hpp"
 #include "aces/aces_utils.hpp"
 
 namespace aces {
@@ -52,8 +51,8 @@ static void WriteToNetCDF(const std::string& name, DualView3D& dv, ESMC_Field te
     // internal state.
 
     // Use ESMC_FILESTATUS_REPLACE and ESMF_IOFMT_NETCDF (from ESMC_Util.h)
-    ESMC_FieldWrite(template_field, (name + ".nc").c_str(), name.c_str(), 1, ESMC_FILESTATUS_REPLACE,
-                    1, ESMF_IOFMT_NETCDF);
+    ESMC_FieldWrite(template_field, (name + ".nc").c_str(), name.c_str(), 1,
+                    ESMC_FILESTATUS_REPLACE, 1, ESMF_IOFMT_NETCDF);
 }
 
 void AcesDiagnosticManager::WriteDiagnostics(const std::vector<std::string>& requested_names,
