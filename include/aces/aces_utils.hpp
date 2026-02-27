@@ -16,13 +16,13 @@ namespace aces {
  *
  * This function extracts the raw data pointer from an ESMF Field and
  * wraps it in a Kokkos View with LayoutLeft to match ESMF's column-major
- * memory layout.
+ * memory layout. The memory remains managed by ESMF.
  *
  * @param field The ESMC_Field to wrap.
- * @param dim1 Size of the first dimension (usually lon).
- * @param dim2 Size of the second dimension (usually lat).
- * @param dim3 Size of the third dimension (usually lev).
- * @return UnmanagedHostView3D Wrapped Kokkos View.
+ * @param dim1 Size of the first dimension (usually lon/nx).
+ * @param dim2 Size of the second dimension (usually lat/ny).
+ * @param dim3 Size of the third dimension (usually lev/nz).
+ * @return UnmanagedHostView3D Wrapped Kokkos View pointing to ESMF data.
  */
 inline UnmanagedHostView3D WrapESMCField(ESMC_Field field, int dim1, int dim2, int dim3) {
     int rc;
