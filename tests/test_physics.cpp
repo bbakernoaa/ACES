@@ -4,95 +4,234 @@
 
 #include "aces/aces_physics_factory.hpp"
 #include "aces/aces_state.hpp"
-#include "aces/physics/aces_fortran_bridge.hpp"
-#include "aces/physics/aces_native_example.hpp"
 
 using namespace aces;
 
 class PhysicsTest : public ::testing::Test {
-   protected:
-    static void SetUpTestSuite() {
-        if (!Kokkos::is_initialized()) Kokkos::initialize();
-    }
+ public:
+  static void SetUpTestSuite() {
+    if (!Kokkos::is_initialized()) Kokkos::initialize();
+  }
 
-    static void TearDownTestSuite() {
-        // Kokkos::finalize(); // Handled by GTest main if necessary
-    }
+  int nx = 4, ny = 4, nz = 2;
+  AcesImportState import_state;
+  AcesExportState export_state;
 
-    int nx = 10, ny = 10, nz = 5;
-    AcesImportState import_state;
-    AcesExportState export_state;
+  void SetUp() override {
+    // Common fields
+    import_state.fields["temperature"] = create_dv("temp", 300.0);
+    import_state.fields["wind_speed_10m"] =
+        create_dv("wind", 15.0);  // High enough for dust
+    import_state.fields["tskin"] = create_dv("tskin", 300.0);
+    import_state.fields["lai"] = create_dv("lai", 3.0);
+    import_state.fields["pardr"] = create_dv("pardr", 100.0);
+    import_state.fields["pardf"] = create_dv("pardf", 50.0);
+    import_state.fields["suncos"] = create_dv("suncos", 1.0);
+    import_state.fields["DMS_seawater"] = create_dv("DMS_seawater", 1.0e-6);
+    import_state.fields["convective_cloud_top_height"] =
+        create_dv("conv_h", 5000.0);
+    import_state.fields["gwettop"] = create_dv("gwettop", 0.1);  // Dry for dust
+    import_state.fields["land_mask"] = create_dv("land_mask", 1.0);
+    import_state.fields["GINOUX_SAND"] = create_dv("sand", 0.1);
+    import_state.fields["zsfc"] = create_dv("zsfc", 100.0);
+    import_state.fields["bxheight_m"] = create_dv("bxh", 1000.0);
 
-    void SetUp() override {
-        import_state.fields["temperature"] = create_dv("temp");
-        import_state.fields["wind_speed_10m"] = create_dv("wind");
-        import_state.fields["base_anthropogenic_nox"] = create_dv("base_nox");
-        export_state.fields["total_nox_emissions"] = create_dv("total_nox");
+    // Export fields
+    export_state.fields["total_SALA_emissions"] = create_dv("sala", 0.0);
+    export_state.fields["total_SALC_emissions"] = create_dv("salc", 0.0);
+    export_state.fields["total_isoprene_emissions"] = create_dv("isop", 0.0);
+    export_state.fields["total_dms_emissions"] = create_dv("dms", 0.0);
+    export_state.fields["total_lightning_nox_emissions"] =
+        create_dv("light", 0.0);
+    export_state.fields["total_soil_nox_emissions"] = create_dv("soil", 0.0);
+    export_state.fields["total_dust_emissions"] = create_dv("dust", 0.0);
+    export_state.fields["total_so2_emissions"] = create_dv("so2", 0.0);
+    export_state.fields["total_nox_emissions"] = create_dv("total_nox", 0.0);
+    import_state.fields["base_anthropogenic_nox"] = create_dv("base_nox", 1.0);
+  }
 
-        Kokkos::deep_copy(import_state.fields["temperature"].view_host(), 300.0);
-        Kokkos::deep_copy(import_state.fields["wind_speed_10m"].view_host(), 5.0);
-        Kokkos::deep_copy(import_state.fields["base_anthropogenic_nox"].view_host(), 1.0);
-        Kokkos::deep_copy(export_state.fields["total_nox_emissions"].view_host(), 0.0);
+  DualView3D create_dv(std::string name, double val) {
+    DualView3D dv(name, nx, ny, nz);
+    Kokkos::deep_copy(dv.view_host(), val);
+    dv.modify<Kokkos::HostSpace>();
+    dv.sync<Kokkos::DefaultExecutionSpace>();
+    return dv;
+  }
 
-        import_state.fields["temperature"].modify<Kokkos::HostSpace>();
-        import_state.fields["wind_speed_10m"].modify<Kokkos::HostSpace>();
-        import_state.fields["base_anthropogenic_nox"].modify<Kokkos::HostSpace>();
-        export_state.fields["total_nox_emissions"].modify<Kokkos::HostSpace>();
-
-        import_state.fields["temperature"].sync<Kokkos::DefaultExecutionSpace>();
-        import_state.fields["wind_speed_10m"].sync<Kokkos::DefaultExecutionSpace>();
-        import_state.fields["base_anthropogenic_nox"].sync<Kokkos::DefaultExecutionSpace>();
-        export_state.fields["total_nox_emissions"].sync<Kokkos::DefaultExecutionSpace>();
-    }
-
-    DualView3D create_dv(std::string name) {
-        return DualView3D(name, nx, ny, nz);
-    }
+  void SetFieldValue(const std::string& name, double val,
+                     bool is_import = true) {
+    auto& fields = is_import ? import_state.fields : export_state.fields;
+    Kokkos::deep_copy(fields[name].view_host(), val);
+    fields[name].modify<Kokkos::HostSpace>();
+    fields[name].sync<Kokkos::DefaultExecutionSpace>();
+  }
 };
 
-TEST_F(PhysicsTest, NativeSchemeTest) {
-    PhysicsSchemeConfig config;
-    config.name = "native_example";
-    auto scheme = PhysicsFactory::CreateScheme(config);
-    ASSERT_NE(scheme, nullptr);
+void TestParity(PhysicsTest* test, const std::string& cpp_name,
+                const std::string& fortran_name,
+                const std::string& field_name) {
+  PhysicsSchemeConfig cfg_cpp, cfg_fort;
+  cfg_cpp.name = cpp_name;
+  cfg_fort.name = fortran_name;
 
-    scheme->Run(import_state, export_state);
+  auto scheme_cpp = PhysicsFactory::CreateScheme(cfg_cpp);
+  auto scheme_fort = PhysicsFactory::CreateScheme(cfg_fort);
 
-    auto& dv = export_state.fields["total_nox_emissions"];
-    dv.sync<Kokkos::HostSpace>();
-    auto hv = dv.view_host();
-    EXPECT_DOUBLE_EQ(hv(0, 0, 0), 2.0);  // 0.0 + 1.0 * 2.0
+  ASSERT_NE(scheme_cpp, nullptr);
+  ASSERT_NE(scheme_fort, nullptr);
+
+  // Run C++
+  scheme_cpp->Run(test->import_state, test->export_state);
+  auto& dv = test->export_state.fields[field_name];
+  dv.sync<Kokkos::HostSpace>();
+  double val_cpp = dv.view_host()(0, 0, 0);
+
+  // Reset and Run Fortran
+  Kokkos::deep_copy(dv.view_host(), 0.0);
+  dv.modify<Kokkos::HostSpace>();
+  dv.sync<Kokkos::DefaultExecutionSpace>();
+
+  scheme_fort->Run(test->import_state, test->export_state);
+  dv.sync<Kokkos::HostSpace>();
+  double val_fort = dv.view_host()(0, 0, 0);
+
+  EXPECT_NEAR(val_cpp, val_fort, std::abs(val_cpp) * 1e-6)
+      << "Parity failed for " << cpp_name;
 }
 
-TEST_F(PhysicsTest, FortranSchemeTest) {
-    PhysicsSchemeConfig config;
-    config.name = "fortran_bridge_example";
-    auto scheme = PhysicsFactory::CreateScheme(config);
-    ASSERT_NE(scheme, nullptr);
-
-    scheme->Run(import_state, export_state);
-
-    auto& dv = export_state.fields["total_nox_emissions"];
-    dv.sync<Kokkos::HostSpace>();
-    auto hv = dv.view_host();
-    EXPECT_DOUBLE_EQ(hv(0, 0, 0), 1.0);  // 0.0 + 1.0
+TEST_F(PhysicsTest, SeaSaltParity) {
+  TestParity(this, "sea_salt", "sea_salt_fortran", "total_SALA_emissions");
 }
 
-TEST_F(PhysicsTest, CombinedSchemesTest) {
-    PhysicsSchemeConfig config1;
-    config1.name = "native_example";
-    PhysicsSchemeConfig config2;
-    config2.name = "fortran_bridge_example";
+TEST_F(PhysicsTest, MeganParity) {
+  TestParity(this, "megan", "megan_fortran", "total_isoprene_emissions");
+}
 
-    auto scheme1 = PhysicsFactory::CreateScheme(config1);
-    auto scheme2 = PhysicsFactory::CreateScheme(config2);
+TEST_F(PhysicsTest, DMSParity) {
+  TestParity(this, "dms", "dms_fortran", "total_dms_emissions");
+}
 
-    scheme1->Run(import_state, export_state);
-    scheme2->Run(import_state, export_state);
+TEST_F(PhysicsTest, LightningParity) {
+  TestParity(this, "lightning", "lightning_fortran",
+             "total_lightning_nox_emissions");
+}
 
-    auto& dv = export_state.fields["total_nox_emissions"];
+TEST_F(PhysicsTest, SoilNoxParity) {
+  TestParity(this, "soil_nox", "soil_nox_fortran", "total_soil_nox_emissions");
+}
+
+TEST_F(PhysicsTest, DustParity) {
+  TestParity(this, "dust", "dust_fortran", "total_dust_emissions");
+}
+
+TEST_F(PhysicsTest, VolcanoParity) {
+  TestParity(this, "volcano", "volcano_fortran", "total_so2_emissions");
+}
+
+// Vertical Distribution Verification
+TEST_F(PhysicsTest, SurfaceEmissionVerticalDistribution) {
+  std::vector<std::string> schemes = {"sea_salt", "megan", "dms", "dust",
+                                      "soil_nox"};
+  std::vector<std::string> fields = {
+      "total_SALA_emissions", "total_isoprene_emissions", "total_dms_emissions",
+      "total_dust_emissions", "total_soil_nox_emissions"};
+
+  for (size_t i = 0; i < schemes.size(); ++i) {
+    PhysicsSchemeConfig cfg;
+    cfg.name = schemes[i];
+    auto scheme = PhysicsFactory::CreateScheme(cfg);
+
+    SetFieldValue(fields[i], 0.0, false);
+    scheme->Run(import_state, export_state);
+
+    auto& dv = export_state.fields[fields[i]];
     dv.sync<Kokkos::HostSpace>();
     auto hv = dv.view_host();
-    // (0.0 + 1.0 * 2.0) + 1.0 = 3.0
-    EXPECT_DOUBLE_EQ(hv(0, 0, 0), 3.0);
+
+    EXPECT_GT(hv(0, 0, 0), 0.0)
+        << "Surface emission missing for " << schemes[i];
+    EXPECT_DOUBLE_EQ(hv(0, 0, 1), 0.0)
+        << "Emission leaked to upper layer for " << schemes[i];
+  }
+}
+
+// Comprehensive Scientific Sensitivity Tests
+TEST_F(PhysicsTest, SeaSaltSensitivity) {
+  PhysicsSchemeConfig cfg;
+  cfg.name = "sea_salt";
+  auto scheme = PhysicsFactory::CreateScheme(cfg);
+
+  // Test Wind Speed Sensitivity
+  SetFieldValue("wind_speed_10m", 5.0);
+  SetFieldValue("total_SALA_emissions", 0.0, false);
+  scheme->Run(import_state, export_state);
+  double em_low =
+      export_state.fields["total_SALA_emissions"].view_host()(0, 0, 0);
+
+  SetFieldValue("wind_speed_10m", 10.0);
+  SetFieldValue("total_SALA_emissions", 0.0, false);
+  scheme->Run(import_state, export_state);
+  double em_high =
+      export_state.fields["total_SALA_emissions"].view_host()(0, 0, 0);
+
+  EXPECT_GT(em_high, em_low * 10.0);  // U^3.41 dependency: 2^3.41 approx 10.6
+
+  // Test SST Sensitivity
+  SetFieldValue("wind_speed_10m", 10.0);
+  SetFieldValue("tskin", 273.15 + 0.0);  // 0C
+  SetFieldValue("total_SALA_emissions", 0.0, false);
+  scheme->Run(import_state, export_state);
+  double em_0c =
+      export_state.fields["total_SALA_emissions"].view_host()(0, 0, 0);
+
+  SetFieldValue("tskin", 273.15 + 20.0);  // 20C
+  SetFieldValue("total_SALA_emissions", 0.0, false);
+  scheme->Run(import_state, export_state);
+  double em_20c =
+      export_state.fields["total_SALA_emissions"].view_host()(0, 0, 0);
+
+  EXPECT_GT(em_20c, em_0c);
+}
+
+TEST_F(PhysicsTest, MeganSensitivity) {
+  PhysicsSchemeConfig cfg;
+  cfg.name = "megan";
+  auto scheme = PhysicsFactory::CreateScheme(cfg);
+
+  // Test Light Sensitivity
+  SetFieldValue("lai", 3.0);
+  SetFieldValue("suncos", 0.0);  // Night
+  SetFieldValue("total_isoprene_emissions", 0.0, false);
+  scheme->Run(import_state, export_state);
+  EXPECT_DOUBLE_EQ(
+      export_state.fields["total_isoprene_emissions"].view_host()(0, 0, 0),
+      0.0);
+
+  SetFieldValue("suncos", 1.0);  // Day
+  SetFieldValue("total_isoprene_emissions", 0.0, false);
+  scheme->Run(import_state, export_state);
+  EXPECT_GT(
+      export_state.fields["total_isoprene_emissions"].view_host()(0, 0, 0),
+      0.0);
+}
+
+TEST_F(PhysicsTest, SoilNoxSensitivity) {
+  PhysicsSchemeConfig cfg;
+  cfg.name = "soil_nox";
+  auto scheme = PhysicsFactory::CreateScheme(cfg);
+
+  // Test Moisture Sensitivity (Poisson-like)
+  SetFieldValue("gwettop", 0.01);
+  SetFieldValue("total_soil_nox_emissions", 0.0, false);
+  scheme->Run(import_state, export_state);
+  double em_dry =
+      export_state.fields["total_soil_nox_emissions"].view_host()(0, 0, 0);
+
+  SetFieldValue("gwettop", 0.3);  // Optimal
+  SetFieldValue("total_soil_nox_emissions", 0.0, false);
+  scheme->Run(import_state, export_state);
+  double em_opt =
+      export_state.fields["total_soil_nox_emissions"].view_host()(0, 0, 0);
+
+  EXPECT_GT(em_opt, em_dry);
 }

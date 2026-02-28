@@ -18,30 +18,32 @@ namespace aces {
  * using Kokkos kernels for high performance on both CPU and GPU.
  */
 class NativePhysicsExample : public PhysicsScheme {
-   public:
-    /**
-     * @brief Default constructor.
-     */
-    NativePhysicsExample() = default;
+ public:
+  /**
+   * @brief Default constructor.
+   */
+  NativePhysicsExample() = default;
 
-    /**
-     * @brief Virtual destructor.
-     */
-    ~NativePhysicsExample() override = default;
+  /**
+   * @brief Virtual destructor.
+   */
+  ~NativePhysicsExample() override = default;
 
-    /**
-     * @brief Initializes the scheme.
-     * @param config YAML node with scheme options.
-     * @param diag_manager Pointer to the diagnostic manager.
-     */
-    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+  /**
+   * @brief Initializes the scheme.
+   * @param config YAML node with scheme options.
+   * @param diag_manager Pointer to the diagnostic manager.
+   */
+  void Initialize(const YAML::Node& config,
+                  AcesDiagnosticManager* diag_manager) override;
 
-    /**
-     * @brief Executes the computational kernel.
-     * @param import_state Meteorlogy and base emissions input.
-     * @param export_state Output emissions to be updated.
-     */
-    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
+  /**
+   * @brief Executes the computational kernel.
+   * @param import_state Meteorlogy and base emissions input.
+   * @param export_state Output emissions to be updated.
+   */
+  void Run(AcesImportState& import_state,
+           AcesExportState& export_state) override;
 };
 
 }  // namespace aces

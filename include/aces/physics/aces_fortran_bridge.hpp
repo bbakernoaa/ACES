@@ -19,30 +19,32 @@ namespace aces {
  * raw Fortran-compatible pointers.
  */
 class FortranBridgeExample : public PhysicsScheme {
-   public:
-    /**
-     * @brief Default constructor.
-     */
-    FortranBridgeExample() = default;
+ public:
+  /**
+   * @brief Default constructor.
+   */
+  FortranBridgeExample() = default;
 
-    /**
-     * @brief Virtual destructor.
-     */
-    ~FortranBridgeExample() override = default;
+  /**
+   * @brief Virtual destructor.
+   */
+  ~FortranBridgeExample() override = default;
 
-    /**
-     * @brief Initializes the Fortran bridge.
-     * @param config YAML node with bridge options.
-     * @param diag_manager Pointer to the diagnostic manager.
-     */
-    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+  /**
+   * @brief Initializes the Fortran bridge.
+   * @param config YAML node with bridge options.
+   * @param diag_manager Pointer to the diagnostic manager.
+   */
+  void Initialize(const YAML::Node& config,
+                  AcesDiagnosticManager* diag_manager) override;
 
-    /**
-     * @brief Coordinates the execution of the Fortran routine.
-     * @param import_state Meteorlogy and base emissions input.
-     * @param export_state Output emissions to be updated.
-     */
-    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
+  /**
+   * @brief Coordinates the execution of the Fortran routine.
+   * @param import_state Meteorlogy and base emissions input.
+   * @param export_state Output emissions to be updated.
+   */
+  void Run(AcesImportState& import_state,
+           AcesExportState& export_state) override;
 };
 
 }  // namespace aces
