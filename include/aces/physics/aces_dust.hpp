@@ -10,14 +10,12 @@ namespace aces {
  * @brief Native C++ implementation of the Ginoux dust emission scheme.
  */
 class DustScheme : public PhysicsScheme {
- public:
-  DustScheme() = default;
-  ~DustScheme() override = default;
+   public:
+    DustScheme() = default;
+    ~DustScheme() override = default;
 
-  void Initialize(const YAML::Node& config,
-                  AcesDiagnosticManager* diag_manager) override;
-  void Run(AcesImportState& import_state,
-           AcesExportState& export_state) override;
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
 };
 
 }  // namespace aces

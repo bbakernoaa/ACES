@@ -24,11 +24,10 @@ namespace aces {
  * @param dim3 Size of the third dimension (usually lev/nz).
  * @return UnmanagedHostView3D Wrapped Kokkos View pointing to ESMF data.
  */
-inline UnmanagedHostView3D WrapESMCField(ESMC_Field field, int dim1, int dim2,
-                                         int dim3) {
-  int rc;
-  double* dataPtr = static_cast<double*>(ESMC_FieldGetPtr(field, 0, &rc));
-  return UnmanagedHostView3D(dataPtr, dim1, dim2, dim3);
+inline UnmanagedHostView3D WrapESMCField(ESMC_Field field, int dim1, int dim2, int dim3) {
+    int rc;
+    double* dataPtr = static_cast<double*>(ESMC_FieldGetPtr(field, 0, &rc));
+    return UnmanagedHostView3D(dataPtr, dim1, dim2, dim3);
 }
 
 }  // namespace aces

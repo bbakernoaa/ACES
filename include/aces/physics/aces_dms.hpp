@@ -10,14 +10,12 @@ namespace aces {
  * @brief Native C++ implementation of the DMS air-sea flux scheme.
  */
 class DMSScheme : public PhysicsScheme {
- public:
-  DMSScheme() = default;
-  ~DMSScheme() override = default;
+   public:
+    DMSScheme() = default;
+    ~DMSScheme() override = default;
 
-  void Initialize(const YAML::Node& config,
-                  AcesDiagnosticManager* diag_manager) override;
-  void Run(AcesImportState& import_state,
-           AcesExportState& export_state) override;
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
 };
 
 }  // namespace aces

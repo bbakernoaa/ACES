@@ -10,14 +10,12 @@ namespace aces {
  * @brief Native C++ implementation of the Lightning NOx emission scheme.
  */
 class LightningScheme : public PhysicsScheme {
- public:
-  LightningScheme() = default;
-  ~LightningScheme() override = default;
+   public:
+    LightningScheme() = default;
+    ~LightningScheme() override = default;
 
-  void Initialize(const YAML::Node& config,
-                  AcesDiagnosticManager* diag_manager) override;
-  void Run(AcesImportState& import_state,
-           AcesExportState& export_state) override;
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
 };
 
 }  // namespace aces

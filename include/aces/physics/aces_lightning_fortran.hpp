@@ -10,14 +10,12 @@ namespace aces {
  * @brief Fortran bridge implementation of the Lightning NOx emission scheme.
  */
 class LightningFortranScheme : public PhysicsScheme {
- public:
-  LightningFortranScheme() = default;
-  ~LightningFortranScheme() override = default;
+   public:
+    LightningFortranScheme() = default;
+    ~LightningFortranScheme() override = default;
 
-  void Initialize(const YAML::Node& config,
-                  AcesDiagnosticManager* diag_manager) override;
-  void Run(AcesImportState& import_state,
-           AcesExportState& export_state) override;
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
 };
 
 }  // namespace aces

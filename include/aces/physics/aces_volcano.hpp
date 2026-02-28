@@ -10,14 +10,12 @@ namespace aces {
  * @brief Native C++ implementation of the volcanic emission scheme.
  */
 class VolcanoScheme : public PhysicsScheme {
- public:
-  VolcanoScheme() = default;
-  ~VolcanoScheme() override = default;
+   public:
+    VolcanoScheme() = default;
+    ~VolcanoScheme() override = default;
 
-  void Initialize(const YAML::Node& config,
-                  AcesDiagnosticManager* diag_manager) override;
-  void Run(AcesImportState& import_state,
-           AcesExportState& export_state) override;
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
 };
 
 }  // namespace aces

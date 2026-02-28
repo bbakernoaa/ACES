@@ -10,14 +10,12 @@ namespace aces {
  * @brief Native C++ implementation of the MEGAN biogenics emission scheme.
  */
 class MeganScheme : public PhysicsScheme {
- public:
-  MeganScheme() = default;
-  ~MeganScheme() override = default;
+   public:
+    MeganScheme() = default;
+    ~MeganScheme() override = default;
 
-  void Initialize(const YAML::Node& config,
-                  AcesDiagnosticManager* diag_manager) override;
-  void Run(AcesImportState& import_state,
-           AcesExportState& export_state) override;
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
 };
 
 }  // namespace aces
