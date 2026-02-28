@@ -43,19 +43,14 @@ int main(int argc, char** argv) {
     ESMC_Calendar cal = ESMC_CalendarCreate("Gregorian", ESMC_CALKIND_GREGORIAN, &rc);
     CHECK_RC(rc, "ESMC_CalendarCreate failed");
 
-    // In ESMF 8.8.0 C API, ESMC_TimeSet has 6 arguments:
-    // int ESMC_TimeSet(ESMC_Time *time, int yy, int mm, int dd, ESMC_Calendar cal, enum ESMC_CalKind_Flag calkindflag);
-    // (Note: The actual signature might vary slightly, but this is the common form in ESMC.h)
-    rc = ESMC_TimeSet(&startTime, 2024, 1, 1, cal, ESMC_CALKIND_GREGORIAN);
+    // In ESMF 8.8.0 C API, ESMC_TimeSet has 6 arguments.
+    rc = ESMC_TimeSet(&startTime, 2024, 1, cal, ESMC_CALKIND_GREGORIAN, 0);
     CHECK_RC(rc, "ESMC_TimeSet (startTime) failed");
-    rc = ESMC_TimeSet(&stopTime, 2024, 1, 2, cal, ESMC_CALKIND_GREGORIAN);
+    rc = ESMC_TimeSet(&stopTime, 2024, 1, cal, ESMC_CALKIND_GREGORIAN, 24 * 3600);
     CHECK_RC(rc, "ESMC_TimeSet (stopTime) failed");
 
     ESMC_TimeInterval timeStep;
-    // int ESMC_TimeIntervalSet(ESMC_TimeInterval *timeInterval, ESMC_I8 s, ESMC_I8 h, ESMC_I8 d, ESMC_I8 m, ESMC_I8 y);
-    // Using a more standard signature for ESMF 8.x:
-    // int ESMC_TimeIntervalSet(ESMC_TimeInterval *timeInterval, ESMC_I8 s, int ms, int us, int ns, int d);
-    rc = ESMC_TimeIntervalSet(&timeStep, 3600, 0, 0, 0, 0); // 1 hour timestep
+    rc = ESMC_TimeIntervalSet(&timeStep, 3600);  // 1 hour timestep
     CHECK_RC(rc, "ESMC_TimeIntervalSet failed");
     ESMC_Clock clock = ESMC_ClockCreate("SimulationClock", timeStep, startTime, stopTime, &rc);
     CHECK_RC(rc, "ESMC_ClockCreate failed");

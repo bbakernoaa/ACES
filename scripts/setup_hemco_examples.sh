@@ -5,6 +5,23 @@
 set -e
 
 mkdir -p examples
+mkdir -p scripts/data_download
+
+# Helper to generate download script for an example
+generate_download_script() {
+    local ex_num=$1
+    local script_file="scripts/data_download/download_ex${ex_num}.sh"
+    shift
+    cat <<EOF > "$script_file"
+#!/bin/bash
+# Data download for HEMCO Example ${ex_num}
+mkdir -p data
+EOF
+    for path in "$@"; do
+        echo "./scripts/download_hemco_data.py $path -o data/\$(basename $path)" >> "$script_file"
+    done
+    chmod +x "$script_file"
+}
 
 # Example 1: Add global anthropogenic emissions (MACCity CO)
 cat <<EOF > examples/aces_config_ex1.yaml
@@ -22,10 +39,11 @@ species:
 cdeps_config:
   streams:
     - name: "MACCITY_CO"
-      file_path: "data/MACCity.nc"
+      file_path: "data/MACCity_2000.nc"
     - name: "HOURLY_SCALFACT"
       file_path: "data/hourly.nc"
 EOF
+generate_download_script 1 "HEMCO/MACCITY/v2014-10/MACCity_2000.nc"
 
 # Example 2: Overlay regional emissions (EMEP CO replaces MACCity CO)
 cat <<EOF > examples/aces_config_ex2.yaml
@@ -51,14 +69,15 @@ species:
 cdeps_config:
   streams:
     - name: "MACCITY_CO"
-      file_path: "data/MACCity.nc"
+      file_path: "data/MACCity_2000.nc"
     - name: "EMEP_CO"
-      file_path: "data/EMEP.nc"
+      file_path: "data/EMEP_2000.nc"
     - name: "HOURLY_SCALFACT"
       file_path: "data/hourly.nc"
     - name: "MASK_EUROPE"
       file_path: "data/mask_europe.nc"
 EOF
+generate_download_script 2 "HEMCO/MACCITY/v2014-10/MACCity_2000.nc" "HEMCO/EMEP/v2014-10/EMEP_2000.nc" "HEMCO/MASKS/v2014-10/mask_europe.nc"
 
 # Example 3: Adding the AEIC aircraft emissions (New Category)
 cat <<EOF > examples/aces_config_ex3.yaml
@@ -77,10 +96,11 @@ species:
 cdeps_config:
   streams:
     - name: "MACCITY_CO"
-      file_path: "data/MACCity.nc"
+      file_path: "data/MACCity_2000.nc"
     - name: "AEIC_CO"
-      file_path: "data/AEIC.nc"
+      file_path: "data/AEIC_2005.nc"
 EOF
+generate_download_script 3 "HEMCO/MACCITY/v2014-10/MACCity_2000.nc" "HEMCO/AEIC/v2014-10/AEIC_2005.nc"
 
 # Example 4: Add biomass burning emissions (HEMCO Extension)
 cat <<EOF > examples/aces_config_ex4.yaml
@@ -100,17 +120,15 @@ species:
 cdeps_config:
   streams:
     - name: "MACCITY_CO"
-      file_path: "data/MACCity.nc"
+      file_path: "data/MACCity_2000.nc"
     - name: "GFED_WDL"
-      file_path: "data/GFED4/GFED4_gen.nc"
+      file_path: "data/GFED4/2000/GFED4_gen.nc"
 EOF
+generate_download_script 4 "HEMCO/MACCITY/v2014-10/MACCity_2000.nc" "HEMCO/GFED4/v2014-10/2000/GFED4_gen.nc"
 
 # Example 5: Tell HEMCO to use additional species
 cat <<EOF > examples/aces_config_ex5.yaml
 # ACES equivalent of HEMCO Example 5
-met_mapping:
-  so2_to_so4: SO2toSO4
-
 species:
   co:
     - field: "MACCITY_CO"
@@ -121,23 +139,17 @@ species:
   so2:
     - field: "MACCITY_SO2"
       operation: "add"
-  so4:
-    - field: "MACCITY_SO2" # Mimic deriving SO4 from SO2
-      operation: "add"
-      scale_fields: ["so2_to_so4"]
 
 cdeps_config:
   streams:
     - name: "MACCITY_CO"
-      file_path: "data/MACCity.nc"
+      file_path: "data/MACCity_2000.nc"
     - name: "MACCITY_NO"
-      file_path: "data/MACCity.nc"
+      file_path: "data/MACCity_2000.nc"
     - name: "MACCITY_SO2"
-      file_path: "data/MACCity.nc"
-    - name: "SO2toSO4"
-      # In ACES, this can be a constant stream or a scale factor
-      file_path: "data/constants.nc"
+      file_path: "data/MACCity_2000.nc"
 EOF
+generate_download_script 5 "HEMCO/MACCITY/v2014-10/MACCity_2000.nc"
 
 # Example 6: Add inventories that do not separate out biofuels and/or trash emissions
 cat <<EOF > examples/aces_config_ex6.yaml
@@ -156,7 +168,9 @@ cdeps_config:
     - name: "EDGAR_NO_POW"
       file_path: "data/EDGAR_v43.NOx.POW.nc"
     - name: "CEDS_NO_AGR"
-      file_path: "data/NO-em-anthro_CMIP_CEDS.nc"
+      file_path: "data/NO-em-anthro_CMIP_CEDS_2000.nc"
 EOF
+generate_download_script 6 "HEMCO/EDGAR/v2014-10/EDGAR_v43.NOx.POW.nc" "HEMCO/CEDS/v2014-10/NO-em-anthro_CMIP_CEDS_2000.nc"
 
 echo "All 6 ACES example configurations created in the 'examples/' directory."
+echo "Data download scripts created in 'scripts/data_download/'."

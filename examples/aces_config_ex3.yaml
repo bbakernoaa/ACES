@@ -13,6 +13,6 @@ species:
 cdeps_config:
   streams:
     - name: "MACCITY_CO"
-      file_path: "data/MACCity.nc"
+      file_path: "data/MACCity_2000.nc"
     - name: "AEIC_CO"
-      file_path: "data/AEIC.nc"
+      file_path: "data/AEIC_2005.nc"

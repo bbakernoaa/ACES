@@ -14,6 +14,6 @@ species:
 cdeps_config:
   streams:
     - name: "MACCITY_CO"
-      file_path: "data/MACCity.nc"
+      file_path: "data/MACCity_2000.nc"
     - name: "GFED_WDL"
-      file_path: "data/GFED4/GFED4_gen.nc"
+      file_path: "data/GFED4/2000/GFED4_gen.nc"

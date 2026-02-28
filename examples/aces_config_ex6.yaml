@@ -13,4 +13,4 @@ cdeps_config:
     - name: "EDGAR_NO_POW"
       file_path: "data/EDGAR_v43.NOx.POW.nc"
     - name: "CEDS_NO_AGR"
-      file_path: "data/NO-em-anthro_CMIP_CEDS.nc"
+      file_path: "data/NO-em-anthro_CMIP_CEDS_2000.nc"

@@ -20,9 +20,9 @@ species:
 cdeps_config:
   streams:
     - name: "MACCITY_CO"
-      file_path: "data/MACCity.nc"
+      file_path: "data/MACCity_2000.nc"
     - name: "EMEP_CO"
-      file_path: "data/EMEP.nc"
+      file_path: "data/EMEP_2000.nc"
     - name: "HOURLY_SCALFACT"
       file_path: "data/hourly.nc"
     - name: "MASK_EUROPE"
