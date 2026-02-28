@@ -1,0 +1,4 @@
+src/physics/aces_soil_nox.cpp:70:16: style: The scope of the variable 'emiss' can be reduced. [variableScope]
+        double emiss = A_BIOME_WET * UNITCONV * t_term * w_term * pulse;
+               ^
+nofile:0:0: information: Active checkers: 161/592 (use --checkers-report=<filename> to see details) [checkersReport]

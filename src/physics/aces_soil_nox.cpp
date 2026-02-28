@@ -66,11 +66,10 @@ void SoilNoxScheme::Run(AcesImportState& import_state,
         // Pulse factor placeholder (HEMCO uses complex stateful pulsing logic)
         double pulse = 1.0;
 
-        // Total emission [kg NO/m2/s]
-        double emiss = A_BIOME_WET * UNITCONV * t_term * w_term * pulse;
-
         // Surface source
         if (k == 0) {
+          // Total emission [kg NO/m2/s]
+          double emiss = A_BIOME_WET * UNITCONV * t_term * w_term * pulse;
           soil_nox(i, j, k) += emiss;
         }
       });
