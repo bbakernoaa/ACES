@@ -4,6 +4,8 @@
 
 #include "aces/physics/aces_dms.hpp"
 #include "aces/physics/aces_dms_fortran.hpp"
+#include "aces/physics/aces_dust.hpp"
+#include "aces/physics/aces_dust_fortran.hpp"
 #include "aces/physics/aces_fortran_bridge.hpp"
 #include "aces/physics/aces_lightning.hpp"
 #include "aces/physics/aces_lightning_fortran.hpp"
@@ -14,6 +16,8 @@
 #include "aces/physics/aces_sea_salt_fortran.hpp"
 #include "aces/physics/aces_soil_nox.hpp"
 #include "aces/physics/aces_soil_nox_fortran.hpp"
+#include "aces/physics/aces_volcano.hpp"
+#include "aces/physics/aces_volcano_fortran.hpp"
 
 /**
  * @file aces_physics_factory.cpp
@@ -64,6 +68,18 @@ std::unique_ptr<PhysicsScheme> PhysicsFactory::CreateScheme(
   } else if (config.name == "soil_nox_fortran") {
 #ifdef ACES_HAS_FORTRAN
     scheme = std::make_unique<SoilNoxFortranScheme>();
+#endif
+  } else if (config.name == "dust") {
+    scheme = std::make_unique<DustScheme>();
+  } else if (config.name == "dust_fortran") {
+#ifdef ACES_HAS_FORTRAN
+    scheme = std::make_unique<DustFortranScheme>();
+#endif
+  } else if (config.name == "volcano") {
+    scheme = std::make_unique<VolcanoScheme>();
+  } else if (config.name == "volcano_fortran") {
+#ifdef ACES_HAS_FORTRAN
+    scheme = std::make_unique<VolcanoFortranScheme>();
 #endif
   } else if (config.language == "fortran" ||
              config.name == "fortran_bridge_example") {

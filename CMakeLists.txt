@@ -201,6 +201,8 @@ set(ACES_SRCS
   src/physics/aces_dms.cpp
   src/physics/aces_lightning.cpp
   src/physics/aces_soil_nox.cpp
+  src/physics/aces_dust.cpp
+  src/physics/aces_volcano.cpp
   src/io/aces_data_ingestor.cpp
   src/io/aces_diagnostic_writer.cpp
 )
@@ -219,6 +221,10 @@ if(ACES_HAS_FORTRAN)
     src/physics/lightning_kernel.F90
     src/physics/aces_soil_nox_fortran_bridge.cpp
     src/physics/soil_nox_kernel.F90
+    src/physics/aces_dust_fortran_bridge.cpp
+    src/physics/dust_kernel.F90
+    src/physics/aces_volcano_fortran_bridge.cpp
+    src/physics/volcano_kernel.F90
   )
 endif()
 

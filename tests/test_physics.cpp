@@ -20,7 +20,8 @@ class PhysicsTest : public ::testing::Test {
   void SetUp() override {
     // Common fields
     import_state.fields["temperature"] = create_dv("temp", 300.0);
-    import_state.fields["wind_speed_10m"] = create_dv("wind", 5.0);
+    import_state.fields["wind_speed_10m"] =
+        create_dv("wind", 15.0);  // High enough for dust
     import_state.fields["tskin"] = create_dv("tskin", 300.0);
     import_state.fields["lai"] = create_dv("lai", 3.0);
     import_state.fields["pardr"] = create_dv("pardr", 100.0);
@@ -29,8 +30,11 @@ class PhysicsTest : public ::testing::Test {
     import_state.fields["DMS_seawater"] = create_dv("DMS_seawater", 1.0e-6);
     import_state.fields["convective_cloud_top_height"] =
         create_dv("conv_h", 5000.0);
-    import_state.fields["gwettop"] = create_dv("gwettop", 0.5);
+    import_state.fields["gwettop"] = create_dv("gwettop", 0.1);  // Dry for dust
     import_state.fields["land_mask"] = create_dv("land_mask", 1.0);
+    import_state.fields["GINOUX_SAND"] = create_dv("sand", 0.1);
+    import_state.fields["zsfc"] = create_dv("zsfc", 100.0);
+    import_state.fields["bxheight_m"] = create_dv("bxh", 1000.0);
 
     // Export fields
     export_state.fields["total_SALA_emissions"] = create_dv("sala", 0.0);
@@ -40,6 +44,8 @@ class PhysicsTest : public ::testing::Test {
     export_state.fields["total_lightning_nox_emissions"] =
         create_dv("light", 0.0);
     export_state.fields["total_soil_nox_emissions"] = create_dv("soil", 0.0);
+    export_state.fields["total_dust_emissions"] = create_dv("dust", 0.0);
+    export_state.fields["total_so2_emissions"] = create_dv("so2", 0.0);
     export_state.fields["total_nox_emissions"] = create_dv("total_nox", 0.0);
     import_state.fields["base_anthropogenic_nox"] = create_dv("base_nox", 1.0);
   }
@@ -114,12 +120,21 @@ TEST_F(PhysicsTest, SoilNoxParity) {
   TestParity(this, "soil_nox", "soil_nox_fortran", "total_soil_nox_emissions");
 }
 
+TEST_F(PhysicsTest, DustParity) {
+  TestParity(this, "dust", "dust_fortran", "total_dust_emissions");
+}
+
+TEST_F(PhysicsTest, VolcanoParity) {
+  TestParity(this, "volcano", "volcano_fortran", "total_so2_emissions");
+}
+
 // Vertical Distribution Verification
 TEST_F(PhysicsTest, SurfaceEmissionVerticalDistribution) {
-  std::vector<std::string> schemes = {"sea_salt", "megan", "dms"};
-  std::vector<std::string> fields = {"total_SALA_emissions",
-                                     "total_isoprene_emissions",
-                                     "total_dms_emissions"};
+  std::vector<std::string> schemes = {"sea_salt", "megan", "dms", "dust",
+                                      "soil_nox"};
+  std::vector<std::string> fields = {
+      "total_SALA_emissions", "total_isoprene_emissions", "total_dms_emissions",
+      "total_dust_emissions", "total_soil_nox_emissions"};
 
   for (size_t i = 0; i < schemes.size(); ++i) {
     PhysicsSchemeConfig cfg;
