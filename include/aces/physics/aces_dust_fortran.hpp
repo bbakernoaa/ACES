@@ -10,14 +10,12 @@ namespace aces {
  * @brief Fortran bridge implementation of the Ginoux dust emission scheme.
  */
 class DustFortranScheme : public PhysicsScheme {
- public:
-  DustFortranScheme() = default;
-  ~DustFortranScheme() override = default;
+   public:
+    DustFortranScheme() = default;
+    ~DustFortranScheme() override = default;
 
-  void Initialize(const YAML::Node& config,
-                  AcesDiagnosticManager* diag_manager) override;
-  void Run(AcesImportState& import_state,
-           AcesExportState& export_state) override;
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
 };
 
 }  // namespace aces

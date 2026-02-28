@@ -10,14 +10,12 @@ namespace aces {
  * @brief Fortran bridge implementation of the volcanic emission scheme.
  */
 class VolcanoFortranScheme : public PhysicsScheme {
- public:
-  VolcanoFortranScheme() = default;
-  ~VolcanoFortranScheme() override = default;
+   public:
+    VolcanoFortranScheme() = default;
+    ~VolcanoFortranScheme() override = default;
 
-  void Initialize(const YAML::Node& config,
-                  AcesDiagnosticManager* diag_manager) override;
-  void Run(AcesImportState& import_state,
-           AcesExportState& export_state) override;
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
 };
 
 }  // namespace aces

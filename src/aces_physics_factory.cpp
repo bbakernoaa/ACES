@@ -35,70 +35,66 @@ namespace aces {
  * @return A unique pointer to the created PhysicsScheme, or nullptr if type is
  * unknown.
  */
-std::unique_ptr<PhysicsScheme> PhysicsFactory::CreateScheme(
-    const PhysicsSchemeConfig& config) {
-  std::unique_ptr<PhysicsScheme> scheme;
+std::unique_ptr<PhysicsScheme> PhysicsFactory::CreateScheme(const PhysicsSchemeConfig& config) {
+    std::unique_ptr<PhysicsScheme> scheme;
 
-  if (config.name == "sea_salt") {
-    scheme = std::make_unique<SeaSaltScheme>();
-  } else if (config.name == "sea_salt_fortran") {
+    if (config.name == "sea_salt") {
+        scheme = std::make_unique<SeaSaltScheme>();
+    } else if (config.name == "sea_salt_fortran") {
 #ifdef ACES_HAS_FORTRAN
-    scheme = std::make_unique<SeaSaltFortranScheme>();
+        scheme = std::make_unique<SeaSaltFortranScheme>();
 #endif
-  } else if (config.name == "megan") {
-    scheme = std::make_unique<MeganScheme>();
-  } else if (config.name == "megan_fortran") {
+    } else if (config.name == "megan") {
+        scheme = std::make_unique<MeganScheme>();
+    } else if (config.name == "megan_fortran") {
 #ifdef ACES_HAS_FORTRAN
-    scheme = std::make_unique<MeganFortranScheme>();
+        scheme = std::make_unique<MeganFortranScheme>();
 #endif
-  } else if (config.name == "dms") {
-    scheme = std::make_unique<DMSScheme>();
-  } else if (config.name == "dms_fortran") {
+    } else if (config.name == "dms") {
+        scheme = std::make_unique<DMSScheme>();
+    } else if (config.name == "dms_fortran") {
 #ifdef ACES_HAS_FORTRAN
-    scheme = std::make_unique<DMSFortranScheme>();
+        scheme = std::make_unique<DMSFortranScheme>();
 #endif
-  } else if (config.name == "lightning") {
-    scheme = std::make_unique<LightningScheme>();
-  } else if (config.name == "lightning_fortran") {
+    } else if (config.name == "lightning") {
+        scheme = std::make_unique<LightningScheme>();
+    } else if (config.name == "lightning_fortran") {
 #ifdef ACES_HAS_FORTRAN
-    scheme = std::make_unique<LightningFortranScheme>();
+        scheme = std::make_unique<LightningFortranScheme>();
 #endif
-  } else if (config.name == "soil_nox") {
-    scheme = std::make_unique<SoilNoxScheme>();
-  } else if (config.name == "soil_nox_fortran") {
+    } else if (config.name == "soil_nox") {
+        scheme = std::make_unique<SoilNoxScheme>();
+    } else if (config.name == "soil_nox_fortran") {
 #ifdef ACES_HAS_FORTRAN
-    scheme = std::make_unique<SoilNoxFortranScheme>();
+        scheme = std::make_unique<SoilNoxFortranScheme>();
 #endif
-  } else if (config.name == "dust") {
-    scheme = std::make_unique<DustScheme>();
-  } else if (config.name == "dust_fortran") {
+    } else if (config.name == "dust") {
+        scheme = std::make_unique<DustScheme>();
+    } else if (config.name == "dust_fortran") {
 #ifdef ACES_HAS_FORTRAN
-    scheme = std::make_unique<DustFortranScheme>();
+        scheme = std::make_unique<DustFortranScheme>();
 #endif
-  } else if (config.name == "volcano") {
-    scheme = std::make_unique<VolcanoScheme>();
-  } else if (config.name == "volcano_fortran") {
+    } else if (config.name == "volcano") {
+        scheme = std::make_unique<VolcanoScheme>();
+    } else if (config.name == "volcano_fortran") {
 #ifdef ACES_HAS_FORTRAN
-    scheme = std::make_unique<VolcanoFortranScheme>();
+        scheme = std::make_unique<VolcanoFortranScheme>();
 #endif
-  } else if (config.language == "fortran" ||
-             config.name == "fortran_bridge_example") {
+    } else if (config.language == "fortran" || config.name == "fortran_bridge_example") {
 #ifdef ACES_HAS_FORTRAN
-    std::cout << "ACES_PhysicsFactory: Creating Fortran scheme " << config.name
-              << std::endl;
-    scheme = std::make_unique<FortranBridgeExample>();
+        std::cout << "ACES_PhysicsFactory: Creating Fortran scheme " << config.name << std::endl;
+        scheme = std::make_unique<FortranBridgeExample>();
 #else
-    std::cerr << "ACES_PhysicsFactory: Error - Fortran scheme " << config.name
-              << " requested but Fortran support is disabled." << std::endl;
+        std::cerr << "ACES_PhysicsFactory: Error - Fortran scheme " << config.name
+                  << " requested but Fortran support is disabled." << std::endl;
 #endif
-  } else {
-    // Default to Native C++
-    std::cout << "ACES_PhysicsFactory: Creating Native scheme " << config.name
-              << std::endl;
-    scheme = std::make_unique<NativePhysicsExample>();
-  }
+    } else {
+        // Default to Native C++
+        std::cout << "ACES_PhysicsFactory: Creating Native scheme " << config.name << std::endl;
+        scheme = std::make_unique<NativePhysicsExample>();
+    }
 
-  return scheme;
+    return scheme;
 }
 
 }  // namespace aces

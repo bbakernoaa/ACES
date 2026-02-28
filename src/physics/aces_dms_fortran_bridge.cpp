@@ -4,50 +4,46 @@
 #include "aces/physics/aces_dms_fortran.hpp"
 
 extern "C" {
-void run_dms_fortran(double* u10m, double* tskin, double* seaconc,
-                     double* dms_emis, int nx, int ny, int nz);
+void run_dms_fortran(double* u10m, double* tskin, double* seaconc, double* dms_emis, int nx, int ny,
+                     int nz);
 }
 
 namespace aces {
 
 void DMSFortranScheme::Initialize(const YAML::Node& /*config*/,
                                   AcesDiagnosticManager* /*diag_manager*/) {
-  std::cout << "DMSFortranScheme: Initialized." << std::endl;
+    std::cout << "DMSFortranScheme: Initialized." << std::endl;
 }
 
-void DMSFortranScheme::Run(AcesImportState& import_state,
-                           AcesExportState& export_state) {
-  auto it_u10 = import_state.fields.find("wind_speed_10m");
-  auto it_tskin = import_state.fields.find("tskin");
-  auto it_seaconc = import_state.fields.find("DMS_seawater");
-  auto it_dms_emis = export_state.fields.find("total_dms_emissions");
+void DMSFortranScheme::Run(AcesImportState& import_state, AcesExportState& export_state) {
+    auto it_u10 = import_state.fields.find("wind_speed_10m");
+    auto it_tskin = import_state.fields.find("tskin");
+    auto it_seaconc = import_state.fields.find("DMS_seawater");
+    auto it_dms_emis = export_state.fields.find("total_dms_emissions");
 
-  if (it_u10 == import_state.fields.end() ||
-      it_tskin == import_state.fields.end() ||
-      it_seaconc == import_state.fields.end() ||
-      it_dms_emis == export_state.fields.end())
-    return;
+    if (it_u10 == import_state.fields.end() || it_tskin == import_state.fields.end() ||
+        it_seaconc == import_state.fields.end() || it_dms_emis == export_state.fields.end())
+        return;
 
-  auto& dv_u10 = it_u10->second;
-  auto& dv_tskin = it_tskin->second;
-  auto& dv_seaconc = it_seaconc->second;
-  auto& dv_dms_emis = it_dms_emis->second;
+    auto& dv_u10 = it_u10->second;
+    auto& dv_tskin = it_tskin->second;
+    auto& dv_seaconc = it_seaconc->second;
+    auto& dv_dms_emis = it_dms_emis->second;
 
-  dv_u10.sync<Kokkos::HostSpace>();
-  dv_tskin.sync<Kokkos::HostSpace>();
-  dv_seaconc.sync<Kokkos::HostSpace>();
-  dv_dms_emis.sync<Kokkos::HostSpace>();
+    dv_u10.sync<Kokkos::HostSpace>();
+    dv_tskin.sync<Kokkos::HostSpace>();
+    dv_seaconc.sync<Kokkos::HostSpace>();
+    dv_dms_emis.sync<Kokkos::HostSpace>();
 
-  int nx = dv_dms_emis.extent(0);
-  int ny = dv_dms_emis.extent(1);
-  int nz = dv_dms_emis.extent(2);
+    int nx = dv_dms_emis.extent(0);
+    int ny = dv_dms_emis.extent(1);
+    int nz = dv_dms_emis.extent(2);
 
-  run_dms_fortran(dv_u10.view_host().data(), dv_tskin.view_host().data(),
-                  dv_seaconc.view_host().data(), dv_dms_emis.view_host().data(),
-                  nx, ny, nz);
+    run_dms_fortran(dv_u10.view_host().data(), dv_tskin.view_host().data(),
+                    dv_seaconc.view_host().data(), dv_dms_emis.view_host().data(), nx, ny, nz);
 
-  dv_dms_emis.modify<Kokkos::HostSpace>();
-  dv_dms_emis.sync<Kokkos::DefaultExecutionSpace>();
+    dv_dms_emis.modify<Kokkos::HostSpace>();
+    dv_dms_emis.sync<Kokkos::DefaultExecutionSpace>();
 }
 
 }  // namespace aces

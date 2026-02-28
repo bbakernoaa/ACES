@@ -12,73 +12,68 @@ namespace aces {
  */
 KOKKOS_INLINE_FUNCTION
 double get_u_ts0(double den, double diam, double g, double rhoa) {
-  double reynol = 1331.0 * std::pow(diam, 1.56) + 0.38;
-  double alpha = den * g * diam / rhoa;
-  double beta = 1.0 + (6.0e-3 / (den * g * std::pow(diam, 2.5)));
-  double gamma = (1.928 * std::pow(reynol, 0.092)) - 1.0;
-  return 129.0e-5 * std::sqrt(alpha) * std::sqrt(beta) / std::sqrt(gamma);
+    double reynol = 1331.0 * std::pow(diam, 1.56) + 0.38;
+    double alpha = den * g * diam / rhoa;
+    double beta = 1.0 + (6.0e-3 / (den * g * std::pow(diam, 2.5)));
+    double gamma = (1.928 * std::pow(reynol, 0.092)) - 1.0;
+    return 129.0e-5 * std::sqrt(alpha) * std::sqrt(beta) / std::sqrt(gamma);
 }
 
-void DustScheme::Initialize(const YAML::Node& /*config*/,
-                            AcesDiagnosticManager* /*diag_manager*/) {
-  std::cout << "DustScheme: Initialized." << std::endl;
+void DustScheme::Initialize(const YAML::Node& /*config*/, AcesDiagnosticManager* /*diag_manager*/) {
+    std::cout << "DustScheme: Initialized." << std::endl;
 }
 
-void DustScheme::Run(AcesImportState& import_state,
-                     AcesExportState& export_state) {
-  auto it_u10 = import_state.fields.find("wind_speed_10m");
-  auto it_gwet = import_state.fields.find("gwettop");
-  auto it_sand = import_state.fields.find("GINOUX_SAND");
-  auto it_dust = export_state.fields.find("total_dust_emissions");
+void DustScheme::Run(AcesImportState& import_state, AcesExportState& export_state) {
+    auto it_u10 = import_state.fields.find("wind_speed_10m");
+    auto it_gwet = import_state.fields.find("gwettop");
+    auto it_sand = import_state.fields.find("GINOUX_SAND");
+    auto it_dust = export_state.fields.find("total_dust_emissions");
 
-  if (it_u10 == import_state.fields.end() ||
-      it_gwet == import_state.fields.end() ||
-      it_sand == import_state.fields.end() ||
-      it_dust == export_state.fields.end())
-    return;
+    if (it_u10 == import_state.fields.end() || it_gwet == import_state.fields.end() ||
+        it_sand == import_state.fields.end() || it_dust == export_state.fields.end())
+        return;
 
-  auto u10m = it_u10->second.view_device();
-  auto gwettop = it_gwet->second.view_device();
-  auto srce_sand = it_sand->second.view_device();
-  auto dust_emis = it_dust->second.view_device();
+    auto u10m = it_u10->second.view_device();
+    auto gwettop = it_gwet->second.view_device();
+    auto srce_sand = it_sand->second.view_device();
+    auto dust_emis = it_dust->second.view_device();
 
-  int nx = dust_emis.extent(0);
-  int ny = dust_emis.extent(1);
-  int nz = dust_emis.extent(2);
+    int nx = dust_emis.extent(0);
+    int ny = dust_emis.extent(1);
+    int nz = dust_emis.extent(2);
 
-  const double G = 980.665;          // cm/s^2
-  const double RHOA = 1.25e-3;       // g/cm3
-  const double CH_DUST = 9.375e-10;  // Default tuning factor
+    const double G = 980.665;          // cm/s^2
+    const double RHOA = 1.25e-3;       // g/cm3
+    const double CH_DUST = 9.375e-10;  // Default tuning factor
 
-  // Example for one bin (Sand-based)
-  const double den = 2500.0 * 1.0e-3;         // g/cm3
-  const double diam = 2.0 * 0.73e-6 * 1.0e2;  // cm
+    // Example for one bin (Sand-based)
+    const double den = 2500.0 * 1.0e-3;         // g/cm3
+    const double diam = 2.0 * 0.73e-6 * 1.0e2;  // cm
 
-  Kokkos::parallel_for(
-      "DustKernel_Faithful",
-      Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>(
-          {0, 0, 0}, {nx, ny, nz}),
-      KOKKOS_LAMBDA(int i, int j, int k) {
-        if (k != 0) return;
+    Kokkos::parallel_for(
+        "DustKernel_Faithful",
+        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0},
+                                                                              {nx, ny, nz}),
+        KOKKOS_LAMBDA(int i, int j, int k) {
+            if (k != 0) return;
 
-        double gw = gwettop(i, j, k);
-        double u10 = u10m(i, j, k);
-        double w2 = u10 * u10;
-        double u_ts0 = get_u_ts0(den, diam, G, RHOA);
+            double gw = gwettop(i, j, k);
+            double u10 = u10m(i, j, k);
+            double w2 = u10 * u10;
+            double u_ts0 = get_u_ts0(den, diam, G, RHOA);
 
-        double u_ts =
-            (gw < 0.2) ? u_ts0 * (1.2 + 0.2 * std::log10(std::max(1.0e-3, gw)))
-                       : 100.0;
+            double u_ts =
+                (gw < 0.2) ? u_ts0 * (1.2 + 0.2 * std::log10(std::max(1.0e-3, gw))) : 100.0;
 
-        if (std::sqrt(w2) > u_ts) {
-          double srce = srce_sand(i, j, k);
-          double flux = CH_DUST * srce * w2 * (std::sqrt(w2) - u_ts);
-          dust_emis(i, j, k) += std::max(0.0, flux);
-        }
-      });
+            if (std::sqrt(w2) > u_ts) {
+                double srce = srce_sand(i, j, k);
+                double flux = CH_DUST * srce * w2 * (std::sqrt(w2) - u_ts);
+                dust_emis(i, j, k) += std::max(0.0, flux);
+            }
+        });
 
-  Kokkos::fence();
-  it_dust->second.modify_device();
+    Kokkos::fence();
+    it_dust->second.modify_device();
 }
 
 }  // namespace aces

@@ -14,14 +14,13 @@ namespace aces {
  * @brief Factory class for creating and managing physics schemes.
  */
 class PhysicsFactory {
- public:
-  /**
-   * @brief Creates a physics scheme based on the provided configuration.
-   * @param config The configuration for the scheme.
-   * @return A unique pointer to the created PhysicsScheme.
-   */
-  static std::unique_ptr<PhysicsScheme> CreateScheme(
-      const PhysicsSchemeConfig& config);
+   public:
+    /**
+     * @brief Creates a physics scheme based on the provided configuration.
+     * @param config The configuration for the scheme.
+     * @return A unique pointer to the created PhysicsScheme.
+     */
+    static std::unique_ptr<PhysicsScheme> CreateScheme(const PhysicsSchemeConfig& config);
 };
 
 }  // namespace aces

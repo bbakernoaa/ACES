@@ -4,46 +4,42 @@
 #include "aces/physics/aces_volcano_fortran.hpp"
 
 extern "C" {
-void run_volcano_fortran(double* zsfc, double* bxheight, double* so2, int nx,
-                         int ny, int nz);
+void run_volcano_fortran(double* zsfc, double* bxheight, double* so2, int nx, int ny, int nz);
 }
 
 namespace aces {
 
 void VolcanoFortranScheme::Initialize(const YAML::Node& /*config*/,
                                       AcesDiagnosticManager* /*diag_manager*/) {
-  std::cout << "VolcanoFortranScheme: Initialized." << std::endl;
+    std::cout << "VolcanoFortranScheme: Initialized." << std::endl;
 }
 
-void VolcanoFortranScheme::Run(AcesImportState& import_state,
-                               AcesExportState& export_state) {
-  auto it_so2 = export_state.fields.find("total_so2_emissions");
-  auto it_zsfc = import_state.fields.find("zsfc");
-  auto it_bxheight = import_state.fields.find("bxheight_m");
+void VolcanoFortranScheme::Run(AcesImportState& import_state, AcesExportState& export_state) {
+    auto it_so2 = export_state.fields.find("total_so2_emissions");
+    auto it_zsfc = import_state.fields.find("zsfc");
+    auto it_bxheight = import_state.fields.find("bxheight_m");
 
-  if (it_so2 == export_state.fields.end() ||
-      it_zsfc == import_state.fields.end() ||
-      it_bxheight == import_state.fields.end())
-    return;
+    if (it_so2 == export_state.fields.end() || it_zsfc == import_state.fields.end() ||
+        it_bxheight == import_state.fields.end())
+        return;
 
-  auto& dv_so2 = it_so2->second;
-  auto& dv_zsfc = it_zsfc->second;
-  auto& dv_bxheight = it_bxheight->second;
+    auto& dv_so2 = it_so2->second;
+    auto& dv_zsfc = it_zsfc->second;
+    auto& dv_bxheight = it_bxheight->second;
 
-  dv_so2.sync<Kokkos::HostSpace>();
-  dv_zsfc.sync<Kokkos::HostSpace>();
-  dv_bxheight.sync<Kokkos::HostSpace>();
+    dv_so2.sync<Kokkos::HostSpace>();
+    dv_zsfc.sync<Kokkos::HostSpace>();
+    dv_bxheight.sync<Kokkos::HostSpace>();
 
-  int nx = dv_so2.extent(0);
-  int ny = dv_so2.extent(1);
-  int nz = dv_so2.extent(2);
+    int nx = dv_so2.extent(0);
+    int ny = dv_so2.extent(1);
+    int nz = dv_so2.extent(2);
 
-  run_volcano_fortran(dv_zsfc.view_host().data(),
-                      dv_bxheight.view_host().data(), dv_so2.view_host().data(),
-                      nx, ny, nz);
+    run_volcano_fortran(dv_zsfc.view_host().data(), dv_bxheight.view_host().data(),
+                        dv_so2.view_host().data(), nx, ny, nz);
 
-  dv_so2.modify<Kokkos::HostSpace>();
-  dv_so2.sync<Kokkos::DefaultExecutionSpace>();
+    dv_so2.modify<Kokkos::HostSpace>();
+    dv_so2.sync<Kokkos::DefaultExecutionSpace>();
 }
 
 }  // namespace aces
