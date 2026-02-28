@@ -1,0 +1,40 @@
+module lightning_kernel_mod
+    use iso_c_binding
+    implicit none
+
+contains
+
+    pure function get_lightning_yield(rate, mw_no) result(yield)
+        real(c_double), intent(in) :: rate, mw_no
+        real(c_double) :: yield
+        ! rate in flashes/km2/s -> yield in kg NO/m2/s
+        yield = (rate * 1.566d26) * (mw_no / 1000.0d0) / (6.022d23 * 1.0d6)
+    end function
+
+    subroutine run_lightning_fortran(conv_depth_ptr, light_nox_ptr, nx, ny, nz) bind(c, name="run_lightning_fortran")
+        type(c_ptr), value :: conv_depth_ptr, light_nox_ptr
+        integer(c_int), value :: nx, ny, nz
+
+        real(c_double), pointer :: conv_depth(:,:,:), light_nox(:,:,:)
+        real(c_double) :: h, h_km, flash_rate, total_yield
+        integer :: i, j, k
+
+        call c_f_pointer(conv_depth_ptr, conv_depth, [int(nx), int(ny), int(nz)])
+        call c_f_pointer(light_nox_ptr, light_nox, [int(nx), int(ny), int(nz)])
+
+        do k = 1, nz
+        do j = 1, ny
+        do i = 1, nx
+            h = conv_depth(i,j,k)
+            if (h > 0.0d0) then
+                h_km = h / 1000.0d0
+                flash_rate = 3.44d-5 * h_km**4.9d0
+                total_yield = get_lightning_yield(flash_rate, 30.0d0)
+                light_nox(i,j,k) = light_nox(i,j,k) + total_yield / dble(nz)
+            end if
+        end do
+        end do
+        end do
+    end subroutine
+
+end module

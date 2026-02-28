@@ -4,95 +4,97 @@
 
 #include "aces/aces_physics_factory.hpp"
 #include "aces/aces_state.hpp"
-#include "aces/physics/aces_fortran_bridge.hpp"
-#include "aces/physics/aces_native_example.hpp"
 
 using namespace aces;
 
 class PhysicsTest : public ::testing::Test {
-   protected:
+   public:
     static void SetUpTestSuite() {
         if (!Kokkos::is_initialized()) Kokkos::initialize();
     }
 
-    static void TearDownTestSuite() {
-        // Kokkos::finalize(); // Handled by GTest main if necessary
-    }
-
-    int nx = 10, ny = 10, nz = 5;
+    int nx = 4, ny = 4, nz = 2;
     AcesImportState import_state;
     AcesExportState export_state;
 
     void SetUp() override {
-        import_state.fields["temperature"] = create_dv("temp");
-        import_state.fields["wind_speed_10m"] = create_dv("wind");
-        import_state.fields["base_anthropogenic_nox"] = create_dv("base_nox");
-        export_state.fields["total_nox_emissions"] = create_dv("total_nox");
+        // Common fields
+        import_state.fields["temperature"] = create_dv("temp", 300.0);
+        import_state.fields["wind_speed_10m"] = create_dv("wind", 5.0);
+        import_state.fields["tskin"] = create_dv("tskin", 300.0);
+        import_state.fields["lai"] = create_dv("lai", 3.0);
+        import_state.fields["pardr"] = create_dv("pardr", 100.0);
+        import_state.fields["pardf"] = create_dv("pardf", 50.0);
+        import_state.fields["suncos"] = create_dv("suncos", 1.0);
+        import_state.fields["DMS_seawater"] = create_dv("DMS_seawater", 1.0e-6);
+        import_state.fields["convective_cloud_top_height"] = create_dv("conv_h", 5000.0);
+        import_state.fields["gwettop"] = create_dv("gwettop", 0.5);
 
-        Kokkos::deep_copy(import_state.fields["temperature"].view_host(), 300.0);
-        Kokkos::deep_copy(import_state.fields["wind_speed_10m"].view_host(), 5.0);
-        Kokkos::deep_copy(import_state.fields["base_anthropogenic_nox"].view_host(), 1.0);
-        Kokkos::deep_copy(export_state.fields["total_nox_emissions"].view_host(), 0.0);
-
-        import_state.fields["temperature"].modify<Kokkos::HostSpace>();
-        import_state.fields["wind_speed_10m"].modify<Kokkos::HostSpace>();
-        import_state.fields["base_anthropogenic_nox"].modify<Kokkos::HostSpace>();
-        export_state.fields["total_nox_emissions"].modify<Kokkos::HostSpace>();
-
-        import_state.fields["temperature"].sync<Kokkos::DefaultExecutionSpace>();
-        import_state.fields["wind_speed_10m"].sync<Kokkos::DefaultExecutionSpace>();
-        import_state.fields["base_anthropogenic_nox"].sync<Kokkos::DefaultExecutionSpace>();
-        export_state.fields["total_nox_emissions"].sync<Kokkos::DefaultExecutionSpace>();
+        // Export fields
+        export_state.fields["total_SALA_emissions"] = create_dv("sala", 0.0);
+        export_state.fields["total_SALC_emissions"] = create_dv("salc", 0.0);
+        export_state.fields["total_isoprene_emissions"] = create_dv("isop", 0.0);
+        export_state.fields["total_dms_emissions"] = create_dv("dms", 0.0);
+        export_state.fields["total_lightning_nox_emissions"] = create_dv("light", 0.0);
+        export_state.fields["total_soil_nox_emissions"] = create_dv("soil", 0.0);
+        export_state.fields["total_nox_emissions"] = create_dv("total_nox", 0.0);
+        import_state.fields["base_anthropogenic_nox"] = create_dv("base_nox", 1.0);
     }
 
-    DualView3D create_dv(std::string name) {
-        return DualView3D(name, nx, ny, nz);
+    DualView3D create_dv(std::string name, double val) {
+        DualView3D dv(name, nx, ny, nz);
+        Kokkos::deep_copy(dv.view_host(), val);
+        dv.modify<Kokkos::HostSpace>();
+        dv.sync<Kokkos::DefaultExecutionSpace>();
+        return dv;
     }
 };
 
-TEST_F(PhysicsTest, NativeSchemeTest) {
-    PhysicsSchemeConfig config;
-    config.name = "native_example";
-    auto scheme = PhysicsFactory::CreateScheme(config);
-    ASSERT_NE(scheme, nullptr);
+void TestParity(PhysicsTest* test, const std::string& cpp_name, const std::string& fortran_name, const std::string& field_name) {
+    PhysicsSchemeConfig cfg_cpp, cfg_fort;
+    cfg_cpp.name = cpp_name;
+    cfg_fort.name = fortran_name;
 
-    scheme->Run(import_state, export_state);
+    auto scheme_cpp = PhysicsFactory::CreateScheme(cfg_cpp);
+    auto scheme_fort = PhysicsFactory::CreateScheme(cfg_fort);
 
-    auto& dv = export_state.fields["total_nox_emissions"];
+    ASSERT_NE(scheme_cpp, nullptr);
+    ASSERT_NE(scheme_fort, nullptr);
+
+    // Run C++
+    scheme_cpp->Run(test->import_state, test->export_state);
+    auto& dv = test->export_state.fields[field_name];
     dv.sync<Kokkos::HostSpace>();
-    auto hv = dv.view_host();
-    EXPECT_DOUBLE_EQ(hv(0, 0, 0), 2.0);  // 0.0 + 1.0 * 2.0
+    double val_cpp = dv.view_host()(0,0,0);
+
+    // Reset and Run Fortran
+    Kokkos::deep_copy(dv.view_host(), 0.0);
+    dv.modify<Kokkos::HostSpace>();
+    dv.sync<Kokkos::DefaultExecutionSpace>();
+
+    scheme_fort->Run(test->import_state, test->export_state);
+    dv.sync<Kokkos::HostSpace>();
+    double val_fort = dv.view_host()(0,0,0);
+
+    EXPECT_NEAR(val_cpp, val_fort, std::abs(val_cpp) * 1e-6) << "Parity failed for " << cpp_name;
 }
 
-TEST_F(PhysicsTest, FortranSchemeTest) {
-    PhysicsSchemeConfig config;
-    config.name = "fortran_bridge_example";
-    auto scheme = PhysicsFactory::CreateScheme(config);
-    ASSERT_NE(scheme, nullptr);
-
-    scheme->Run(import_state, export_state);
-
-    auto& dv = export_state.fields["total_nox_emissions"];
-    dv.sync<Kokkos::HostSpace>();
-    auto hv = dv.view_host();
-    EXPECT_DOUBLE_EQ(hv(0, 0, 0), 1.0);  // 0.0 + 1.0
+TEST_F(PhysicsTest, SeaSaltParity) {
+    TestParity(this, "sea_salt", "sea_salt_fortran", "total_SALA_emissions");
 }
 
-TEST_F(PhysicsTest, CombinedSchemesTest) {
-    PhysicsSchemeConfig config1;
-    config1.name = "native_example";
-    PhysicsSchemeConfig config2;
-    config2.name = "fortran_bridge_example";
+TEST_F(PhysicsTest, MeganParity) {
+    TestParity(this, "megan", "megan_fortran", "total_isoprene_emissions");
+}
 
-    auto scheme1 = PhysicsFactory::CreateScheme(config1);
-    auto scheme2 = PhysicsFactory::CreateScheme(config2);
+TEST_F(PhysicsTest, DMSParity) {
+    TestParity(this, "dms", "dms_fortran", "total_dms_emissions");
+}
 
-    scheme1->Run(import_state, export_state);
-    scheme2->Run(import_state, export_state);
+TEST_F(PhysicsTest, LightningParity) {
+    TestParity(this, "lightning", "lightning_fortran", "total_lightning_nox_emissions");
+}
 
-    auto& dv = export_state.fields["total_nox_emissions"];
-    dv.sync<Kokkos::HostSpace>();
-    auto hv = dv.view_host();
-    // (0.0 + 1.0 * 2.0) + 1.0 = 3.0
-    EXPECT_DOUBLE_EQ(hv(0, 0, 0), 3.0);
+TEST_F(PhysicsTest, SoilNoxParity) {
+    TestParity(this, "soil_nox", "soil_nox_fortran", "total_soil_nox_emissions");
 }
