@@ -26,4 +26,4 @@ ACES operates as an ESMF Grid Component. It follows the standard NUOPC/ESMF life
 
 ## Get Started
 
-Check out the [User's Guide](users-guide.md) to learn how to build and run ACES, or dive into the [Tutorial](tutorial.md) to start writing your own physics schemes.
+Check out the [User's Guide](users-guide.md) to learn how to build and run ACES, explore the [Migration Examples](migration_examples.md) to see side-by-side comparisons with HEMCO, or dive into the [Tutorial](tutorial.md) to start writing your own physics schemes.
