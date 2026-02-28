@@ -164,6 +164,6 @@ species:
 species:
   no:
     - field: "EDGAR_NO_POW"
-      category: "1"
+      category: "anthropogenic"
       operation: "add"
 ```

@@ -14,7 +14,6 @@ generate_download_script() {
     shift
     cat <<EOF > "$script_file"
 #!/bin/bash
-# Data download for HEMCO Example ${ex_num}
 mkdir -p data
 EOF
     for path in "$@"; do
@@ -25,7 +24,6 @@ EOF
 
 # Example 1: Add global anthropogenic emissions (MACCity CO)
 cat <<EOF > examples/aces_config_ex1.yaml
-# ACES equivalent of HEMCO Example 1
 meteorology:
   hourly_scalfact: HOURLY_SCALFACT
 
@@ -47,7 +45,6 @@ generate_download_script 1 "HEMCO/MACCITY/v2014-07/MACCity_4x5.nc"
 
 # Example 2: Overlay regional emissions
 cat <<EOF > examples/aces_config_ex2.yaml
-# ACES equivalent of HEMCO Example 2
 meteorology:
   hourly_scalfact: HOURLY_SCALFACT
   mask_europe: MASK_EUROPE
@@ -55,12 +52,12 @@ meteorology:
 species:
   co:
     - field: "MACCITY_CO"
-      category: "1"
+      category: "anthropogenic"
       hierarchy: 1
       operation: "add"
       scale_fields: ["hourly_scalfact"]
     - field: "EMEP_CO"
-      category: "1"
+      category: "anthropogenic"
       hierarchy: 2
       operation: "replace"
       mask: "mask_europe"
@@ -77,19 +74,18 @@ cdeps_inline_config:
     - name: "MASK_EUROPE"
       file: "data/mask_europe.nc"
 EOF
-generate_download_script 2 "HEMCO/MACCITY/v2014-07/MACCity_4x5.nc" "HEMCO/EMEP/v2014-07/EMEP_2000.nc" "HEMCO/MASKS/v2014-07/mask_europe.nc"
+generate_download_script 2 "HEMCO/MACCITY/v2014-07/MACCity_4x5.nc"
 
 # Example 3: Adding the AEIC aircraft emissions
 cat <<EOF > examples/aces_config_ex3.yaml
-# ACES equivalent of HEMCO Example 3
 species:
   co:
     - field: "MACCITY_CO"
-      category: "1"
+      category: "anthropogenic"
       hierarchy: 1
       operation: "add"
     - field: "AEIC_CO"
-      category: "2"
+      category: "aircraft"
       hierarchy: 1
       operation: "add"
 
@@ -104,7 +100,6 @@ generate_download_script 3 "HEMCO/MACCITY/v2014-07/MACCity_4x5.nc" "HEMCO/AEIC/v
 
 # Example 4: Add biomass burning emissions
 cat <<EOF > examples/aces_config_ex4.yaml
-# ACES equivalent of HEMCO Example 4
 physics_schemes:
   - name: "GFED"
     language: "cpp"
@@ -114,7 +109,7 @@ physics_schemes:
 species:
   co:
     - field: "MACCITY_CO"
-      category: "1"
+      category: "anthropogenic"
       hierarchy: 1
       operation: "add"
 
@@ -122,14 +117,11 @@ cdeps_inline_config:
   streams:
     - name: "MACCITY_CO"
       file: "data/MACCity_4x5.nc"
-    - name: "GFED_WDL"
-      file: "data/GFED4_gen.nc"
 EOF
 generate_download_script 4 "HEMCO/MACCITY/v2014-07/MACCity_4x5.nc"
 
-# Example 5: Additional species
+# Example 5: Tell HEMCO to use additional species
 cat <<EOF > examples/aces_config_ex5.yaml
-# ACES equivalent of HEMCO Example 5
 species:
   co:
     - field: "MACCITY_CO"
@@ -154,14 +146,13 @@ generate_download_script 5 "HEMCO/MACCITY/v2014-07/MACCity_4x5.nc" "HEMCO/MACCIT
 
 # Example 6: Non-separated inventories
 cat <<EOF > examples/aces_config_ex6.yaml
-# ACES equivalent of HEMCO Example 6
 species:
   no:
     - field: "EDGAR_NO_POW"
-      category: "1"
+      category: "anthropogenic"
       operation: "add"
     - field: "CEDS_NO_AGR"
-      category: "1"
+      category: "anthropogenic"
       operation: "add"
 
 cdeps_inline_config:
@@ -169,9 +160,8 @@ cdeps_inline_config:
     - name: "EDGAR_NO_POW"
       file: "data/EDGAR_v43.NOx.POW.nc"
     - name: "CEDS_NO_AGR"
-      file: "data/NO-em-anthro_CMIP_CEDS.nc"
+      file: "data/ALK4_butanes-em-total-anthro_CEDS_1970.nc"
 EOF
-generate_download_script 6 "HEMCO/EDGARv43/v2014-10/EDGAR_v43.NOx.POW.nc" "HEMCO/CEDS/v2014-10/NO-em-anthro_CMIP_CEDS.nc"
+generate_download_script 6 "HEMCO/EDGARv43/v2014-10/EDGAR_v43.NOx.POW.nc" "HEMCO/CEDS/v2020-08/1970/ALK4_butanes-em-total-anthro_CEDS_1970.nc"
 
 echo "All 6 ACES example configurations created in the 'examples/' directory."
-echo "Data download scripts created in 'scripts/data_download/'."

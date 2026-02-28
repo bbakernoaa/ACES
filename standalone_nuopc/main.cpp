@@ -12,7 +12,7 @@
  * @brief Standalone NUOPC driver for the ACES component.
  *
  * This driver demonstrates how to initialize and run the ACES component
- * within a NUOPC Driver framework.
+ * within a NUOPC Driver framework using the ESMF C API.
  */
 
 extern "C" {
@@ -33,84 +33,68 @@ int main(int argc, char** argv) {
     CHECK_RC(rc, "ESMC_Initialize failed");
     std::cout << "[NUOPC Driver] ESMF Initialized." << std::endl;
 
-    // 2. Define simulation grid dimensions
-    const int nx = 72;
-    const int ny = 46;
-    const int nz = 10;
-
-    // 3. Create simulation clock
-    ESMC_Time startTime, stopTime;
+    // 2. Create simulation clock
     ESMC_Calendar cal = ESMC_CalendarCreate("Gregorian", ESMC_CALKIND_GREGORIAN, &rc);
     CHECK_RC(rc, "ESMC_CalendarCreate failed");
 
-    // Correct signature for ESMC_TimeSet:
-    // int ESMC_TimeSet(ESMC_Time *time, int yy, int h, ESMC_Calendar calendar, enum ESMC_CalKind_Flag calkindflag, int timeZone);
-    // (Wait, the memory from previous steps says 6 args: time, yy, h, calendar, calkindflag, timeZone)
-    // Actually, looking at example_driver.cpp:
-    // ESMC_TimeSet(&startTime, 2024, 1, cal, ESMC_CALKIND_GREGORIAN, 0);
-    // That is 6 args.
-    rc = ESMC_TimeSet(&startTime, 2024, 1, cal, ESMC_CALKIND_GREGORIAN, 0);
+    ESMC_Time startTime, stopTime;
+    rc = ESMC_TimeSet(&startTime, ESMC_ArgYY, 2024, ESMC_ArgMM, 1, ESMC_ArgDD, 1,
+                      ESMC_ArgCalendar, cal, ESMC_ArgLast);
     CHECK_RC(rc, "ESMC_TimeSet (startTime) failed");
-    rc = ESMC_TimeSet(&stopTime, 2024, 1, cal, ESMC_CALKIND_GREGORIAN, 24);
+
+    rc = ESMC_TimeSet(&stopTime, ESMC_ArgYY, 2024, ESMC_ArgMM, 1, ESMC_ArgDD, 2,
+                      ESMC_ArgCalendar, cal, ESMC_ArgLast);
     CHECK_RC(rc, "ESMC_TimeSet (stopTime) failed");
 
     ESMC_TimeInterval timeStep;
-    // signature: int ESMC_TimeIntervalSet(ESMC_TimeInterval *timeInterval, ESMC_I8 s, ESMC_I8 h, ESMC_I8 d, ESMC_I8 m, ESMC_I8 y);
-    // Wait, example_driver.cpp uses: ESMC_TimeIntervalSet(&timeStep, 1);
-    // That is 2 args.
-    rc = ESMC_TimeIntervalSet(&timeStep, 3600); // 1 hour timestep
+    rc = ESMC_TimeIntervalSet(&timeStep, ESMC_ArgS, 3600, ESMC_ArgLast);
     CHECK_RC(rc, "ESMC_TimeIntervalSet failed");
-    ESMC_Clock clock = ESMC_ClockCreate("SimulationClock", timeStep, startTime, stopTime, &rc);
+
+    // In ESMF C API, ESMC_ClockCreate takes 4 arguments: (timeStep, startTime, stopTime, &rc)
+    ESMC_Clock clock = ESMC_ClockCreate(timeStep, startTime, stopTime, &rc);
     CHECK_RC(rc, "ESMC_ClockCreate failed");
 
-    // 4. Create the NUOPC Driver component
-    ESMC_GridComp driverComp = ESMC_GridCompCreate("ACES_Driver", NULL, clock, &rc);
-    CHECK_RC(rc, "ESMC_GridCompCreate (driver) failed");
-
-    // 5. Create the ACES component as a child
+    // 3. Create the ACES component
     ESMC_GridComp acesComp = ESMC_GridCompCreate("ACES", NULL, clock, &rc);
-    CHECK_RC(rc, "ESMC_GridCompCreate (aces) failed");
+    CHECK_RC(rc, "ESMC_GridCompCreate failed");
 
     // Register ACES services
     ACES_SetServices(acesComp, &rc);
     CHECK_RC(rc, "ACES_SetServices failed");
 
-    // 6. Initialize ACES component via ESMF/NUOPC lifecycle
+    // 4. Create ESMF States for data coupling
     ESMC_State importState = ESMC_StateCreate("ImportState", &rc);
     CHECK_RC(rc, "ESMC_StateCreate (import) failed");
     ESMC_State exportState = ESMC_StateCreate("ExportState", &rc);
     CHECK_RC(rc, "ESMC_StateCreate (export) failed");
 
+    // 5. Initialize ACES component via ESMF/NUOPC lifecycle
     std::cout << "[NUOPC Driver] Initializing ACES component..." << std::endl;
-    // Signature: int ESMC_GridCompInitialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock clock, int phase, int *rc);
-    // (This matches example_driver.cpp if ACES_Initialize is called, but here we use generic GridComp call)
-    rc = ESMC_GridCompInitialize(acesComp, importState, exportState, clock, 1, &rc);
+    rc = ESMC_GridCompInitialize(acesComp, importState, exportState, clock, ESMC_ArgLast);
     CHECK_RC(rc, "ESMC_GridCompInitialize failed");
 
-    // 7. Main simulation loop
+    // 6. Main simulation loop
     std::cout << "[NUOPC Driver] Starting simulation loop..." << std::endl;
 
     for (int step = 0; step < 5; ++step) {
         std::cout << "--- Timestep " << step << " ---" << std::endl;
 
-        rc = ESMC_GridCompRun(acesComp, importState, exportState, clock, 1, &rc);
+        rc = ESMC_GridCompRun(acesComp, importState, exportState, clock, ESMC_ArgLast);
         CHECK_RC(rc, "ESMC_GridCompRun failed");
 
-        // Advance simulation clock
         rc = ESMC_ClockAdvance(clock);
         CHECK_RC(rc, "ESMC_ClockAdvance failed");
     }
 
-    // 8. Finalize component and ESMF
+    // 7. Finalize component and ESMF
     std::cout << "[NUOPC Driver] Finalizing ACES component..." << std::endl;
-    rc = ESMC_GridCompFinalize(acesComp, importState, exportState, clock, 1, &rc);
+    rc = ESMC_GridCompFinalize(acesComp, importState, exportState, clock, ESMC_ArgLast);
     CHECK_RC(rc, "ESMC_GridCompFinalize failed");
 
     // Cleanup ESMF objects
     ESMC_StateDestroy(&importState);
     ESMC_StateDestroy(&exportState);
     ESMC_GridCompDestroy(&acesComp);
-    ESMC_GridCompDestroy(&driverComp);
     ESMC_ClockDestroy(&clock);
     ESMC_CalendarDestroy(&cal);
 
