@@ -10,16 +10,18 @@ namespace aces {
  * @brief Native C++ implementation of the Sea Salt emission scheme.
  */
 class SeaSaltScheme : public PhysicsScheme {
-   public:
-    SeaSaltScheme() = default;
-    ~SeaSaltScheme() override = default;
+ public:
+  SeaSaltScheme() = default;
+  ~SeaSaltScheme() override = default;
 
-    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
-    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
+  void Initialize(const YAML::Node& config,
+                  AcesDiagnosticManager* diag_manager) override;
+  void Run(AcesImportState& import_state,
+           AcesExportState& export_state) override;
 
-   private:
-    double srrc_SALA_ = 0.0;
-    double srrc_SALC_ = 0.0;
+ private:
+  double srrc_SALA_ = 0.0;
+  double srrc_SALC_ = 0.0;
 };
 
 }  // namespace aces

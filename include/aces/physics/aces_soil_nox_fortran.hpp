@@ -10,12 +10,14 @@ namespace aces {
  * @brief Fortran bridge implementation of the Soil NOx emission scheme.
  */
 class SoilNoxFortranScheme : public PhysicsScheme {
-   public:
-    SoilNoxFortranScheme() = default;
-    ~SoilNoxFortranScheme() override = default;
+ public:
+  SoilNoxFortranScheme() = default;
+  ~SoilNoxFortranScheme() override = default;
 
-    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
-    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
+  void Initialize(const YAML::Node& config,
+                  AcesDiagnosticManager* diag_manager) override;
+  void Run(AcesImportState& import_state,
+           AcesExportState& export_state) override;
 };
 
 }  // namespace aces

@@ -10,12 +10,14 @@ namespace aces {
  * @brief Fortran bridge implementation of the DMS air-sea flux scheme.
  */
 class DMSFortranScheme : public PhysicsScheme {
-   public:
-    DMSFortranScheme() = default;
-    ~DMSFortranScheme() override = default;
+ public:
+  DMSFortranScheme() = default;
+  ~DMSFortranScheme() override = default;
 
-    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
-    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
+  void Initialize(const YAML::Node& config,
+                  AcesDiagnosticManager* diag_manager) override;
+  void Run(AcesImportState& import_state,
+           AcesExportState& export_state) override;
 };
 
 }  // namespace aces

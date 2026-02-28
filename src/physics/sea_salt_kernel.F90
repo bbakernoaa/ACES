@@ -36,6 +36,7 @@ contains
         call c_f_pointer(salc_ptr, salc, [int(nx), int(ny), int(nz)])
 
         do k = 1, nz
+        if (k == 1) then ! Restricted to surface
         do j = 1, ny
         do i = 1, nx
             u = u10m(i,j,k)
@@ -70,6 +71,7 @@ contains
             salc(i,j,k) = salc(i,j,k) + scale * total_kg
         end do
         end do
+        end if
         end do
     end subroutine
 

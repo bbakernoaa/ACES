@@ -10,15 +10,17 @@ namespace aces {
  * @brief Fortran bridge implementation of the Sea Salt emission scheme.
  */
 class SeaSaltFortranScheme : public PhysicsScheme {
-   public:
-    SeaSaltFortranScheme() = default;
-    ~SeaSaltFortranScheme() override = default;
+ public:
+  SeaSaltFortranScheme() = default;
+  ~SeaSaltFortranScheme() override = default;
 
-    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
-    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
+  void Initialize(const YAML::Node& config,
+                  AcesDiagnosticManager* diag_manager) override;
+  void Run(AcesImportState& import_state,
+           AcesExportState& export_state) override;
 
-   private:
-    double scaling_factor_ = 1.0e-11;
+ private:
+  double scaling_factor_ = 1.0e-11;
 };
 
 }  // namespace aces

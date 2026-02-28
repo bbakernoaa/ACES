@@ -30,6 +30,7 @@ contains
         call c_f_pointer(dms_emis_ptr, dms_emis, [int(nx), int(ny), int(nz)])
 
         do k = 1, nz
+        if (k == 1) then ! Restricted to surface
         do j = 1, ny
         do i = 1, nx
             tk = tskin(i,j,k)
@@ -45,6 +46,7 @@ contains
             end if
         end do
         end do
+        end if
         end do
     end subroutine
 

@@ -4,11 +4,16 @@ module lightning_kernel_mod
 
 contains
 
-    pure function get_lightning_yield(rate, mw_no) result(yield)
+    pure function get_lightning_yield(rate, mw_no, is_land) result(yield)
         real(c_double), intent(in) :: rate, mw_no
-        real(c_double) :: yield
-        ! rate in flashes/km2/s -> yield in kg NO/m2/s
-        yield = (rate * 1.566d26) * (mw_no / 1000.0d0) / (6.022d23 * 1.0d6)
+        logical, intent(in) :: is_land
+        real(c_double) :: yield, yield_molec
+        if (is_land) then
+            yield_molec = 3.011d26
+        else
+            yield_molec = 1.566d26
+        end if
+        yield = (rate * yield_molec) * (mw_no / 1000.0d0) / (6.022d23 * 1.0d6)
     end function
 
     subroutine run_lightning_fortran(conv_depth_ptr, light_nox_ptr, nx, ny, nz) bind(c, name="run_lightning_fortran")
@@ -29,7 +34,8 @@ contains
             if (h > 0.0d0) then
                 h_km = h / 1000.0d0
                 flash_rate = 3.44d-5 * h_km**4.9d0
-                total_yield = get_lightning_yield(flash_rate, 30.0d0)
+                ! Default to is_land=.true. for now as land mask isn't passed yet
+                total_yield = get_lightning_yield(flash_rate, 30.0d0, .true.)
                 light_nox(i,j,k) = light_nox(i,j,k) + total_yield / dble(nz)
             end if
         end do

@@ -10,12 +10,14 @@ namespace aces {
  * @brief Native C++ implementation of the Soil NOx emission scheme.
  */
 class SoilNoxScheme : public PhysicsScheme {
-   public:
-    SoilNoxScheme() = default;
-    ~SoilNoxScheme() override = default;
+ public:
+  SoilNoxScheme() = default;
+  ~SoilNoxScheme() override = default;
 
-    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
-    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
+  void Initialize(const YAML::Node& config,
+                  AcesDiagnosticManager* diag_manager) override;
+  void Run(AcesImportState& import_state,
+           AcesExportState& export_state) override;
 };
 
 }  // namespace aces
