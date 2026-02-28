@@ -28,12 +28,23 @@ namespace aces {
  * @param ny Size of the second grid dimension.
  * @param nz Size of the third grid dimension.
  */
-void ComputeEmissions(const AcesConfig& config, FieldResolver& resolver, int nx, int ny, int nz) {
-    // Create a 1.0 mask view for layers without an explicit mask.
-    // This allows us to use a unified branchless kernel for all layers.
-    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> default_mask(
-        "default_mask", nx, ny, nz);
-    Kokkos::deep_copy(default_mask, 1.0);
+void ComputeEmissions(const AcesConfig& config, FieldResolver& resolver, int nx, int ny, int nz,
+                      Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
+                          default_mask,
+                      Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
+                          category_scratch,
+                      int hour, int day_of_week) {
+    // Create local views if persistent ones are not provided.
+    if (!default_mask.data()) {
+        default_mask = Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>(
+            "default_mask_local", nx, ny, nz);
+        Kokkos::deep_copy(default_mask, 1.0);
+    }
+
+    if (!category_scratch.data()) {
+        category_scratch = Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>(
+            "category_scratch_local", nx, ny, nz);
+    }
 
     for (auto const& [species, layers] : config.species_layers) {
         std::string export_name = "total_" + species + "_emissions";
@@ -62,9 +73,8 @@ void ComputeEmissions(const AcesConfig& config, FieldResolver& resolver, int nx,
                           return a.hierarchy < b.hierarchy;
                       });
 
-            // Create temporary view for category accumulation
-            Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
-                category_view("category_view", nx, ny, nz);
+            // Use persistent or local scratch view for category accumulation
+            auto category_view = category_scratch;
             Kokkos::deep_copy(category_view, 0.0);
 
             for (auto const& layer : cat_layers) {
@@ -89,22 +99,45 @@ void ComputeEmissions(const AcesConfig& config, FieldResolver& resolver, int nx,
                     }
                 }
 
-                Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
-                    mask_view;
-                if (!layer.mask_name.empty()) {
-                    mask_view = resolver.ResolveImportDevice(layer.mask_name, nx, ny, nz);
-                    if (mask_view.data() == nullptr) {
-                        std::cerr << "ACES_Compute: Warning - Could not resolve mask "
-                                  << layer.mask_name << ", using default 1.0" << std::endl;
-                        mask_view = default_mask;
+                // Resolve and combine multiple geographical masks
+                std::vector<Kokkos::View<const double***, Kokkos::LayoutLeft,
+                                         Kokkos::DefaultExecutionSpace>>
+                    resolved_masks;
+                for (const auto& m_name : layer.masks) {
+                    auto m_view = resolver.ResolveImportDevice(m_name, nx, ny, nz);
+                    if (m_view.data() != nullptr) {
+                        resolved_masks.push_back(m_view);
+                    } else {
+                        std::cerr << "ACES_Compute: Warning - Could not resolve mask " << m_name
+                                  << std::endl;
                     }
-                } else {
-                    mask_view = default_mask;
+                }
+
+                constexpr int MAX_MASKS = 8;
+                Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
+                    masks_arr[MAX_MASKS];
+                int num_masks = std::min((int)resolved_masks.size(), MAX_MASKS);
+                for (int m = 0; m < num_masks; ++m) {
+                    masks_arr[m] = resolved_masks[m];
                 }
 
                 // 0.0 for 'add', 1.0 for 'replace'
                 double replace_flag = (layer.operation == "replace") ? 1.0 : 0.0;
                 double scale = layer.scale;
+
+                // Apply temporal cycles
+                if (!layer.diurnal_cycle.empty()) {
+                    auto it = config.temporal_cycles.find(layer.diurnal_cycle);
+                    if (it != config.temporal_cycles.end() && it->second.factors.size() == 24) {
+                        scale *= it->second.factors[hour % 24];
+                    }
+                }
+                if (!layer.weekly_cycle.empty()) {
+                    auto it = config.temporal_cycles.find(layer.weekly_cycle);
+                    if (it != config.temporal_cycles.end() && it->second.factors.size() == 7) {
+                        scale *= it->second.factors[day_of_week % 7];
+                    }
+                }
 
                 // Use a fixed-size array for scales to avoid std::vector capture in lambda.
                 // HEMCO typically uses a limited number of scale factors per layer.
@@ -126,9 +159,14 @@ void ComputeEmissions(const AcesConfig& config, FieldResolver& resolver, int nx,
                             combined_scale *= scales_arr[s](i, j, k);
                         }
 
+                        double combined_mask = 1.0;
+                        for (int m = 0; m < num_masks; ++m) {
+                            combined_mask *= masks_arr[m](i, j, k);
+                        }
+
                         category_view(i, j, k) =
-                            category_view(i, j, k) * (1.0 - replace_flag * mask_view(i, j, k)) +
-                            field_view(i, j, k) * combined_scale * mask_view(i, j, k);
+                            category_view(i, j, k) * (1.0 - replace_flag * combined_mask) +
+                            field_view(i, j, k) * combined_scale * combined_mask;
                     });
             }
 

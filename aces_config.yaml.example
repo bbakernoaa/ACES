@@ -5,6 +5,11 @@
 # Fields used in 'species' definitions are dynamically resolved.
 # ACES first checks if a field is provided by CDEPS-inline (see 'cdeps_inline_config').
 # If not found in CDEPS, it attempts to pull the field from the ESMF ImportState.
+# Meteorology mapping allows internal names to be mapped to external (e.g., CF standard) names.
+meteorology:
+  temperature: "air_temperature"
+  specific_humidity: "specific_humidity"
+
 species:
   nox:
     # 1. Base anthropogenic emissions read from a NetCDF file via CDEPS-inline.
