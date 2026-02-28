@@ -420,7 +420,8 @@ class AcesStateResolver : public FieldResolver {
 TEST_F(AcesComputeTest, MeteorologyMappingAndScaling) {
     int nx = 1, ny = 1, nz = 1;
 
-    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> emissions_data("emi", nx, ny, nz);
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> emissions_data("emi", nx, ny,
+                                                                                  nz);
     Kokkos::deep_copy(emissions_data, 100.0);
 
     Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> temp_data("temp", nx, ny, nz);
