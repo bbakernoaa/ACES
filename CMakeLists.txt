@@ -343,6 +343,9 @@ target_link_libraries(hemco_mimic_driver
   aces
 )
 
+# Standalone NUOPC driver
+add_subdirectory(standalone_nuopc)
+
 include(GoogleTest)
 gtest_discover_tests(test_aces_cap)
 gtest_discover_tests(test_aces_utils)
