@@ -44,12 +44,12 @@ class FieldResolver {
  * @param hour Current hour of the day (0-23) for diurnal cycles.
  * @param day_of_week Current day of the week (0-6) for weekly cycles.
  */
-void ComputeEmissions(const AcesConfig& config, FieldResolver& resolver, int nx, int ny, int nz,
-                      Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
-                          default_mask = {},
-                      Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
-                          category_scratch = {},
-                      int hour = 0, int day_of_week = 0);
+void ComputeEmissions(
+    const AcesConfig& config, FieldResolver& resolver, int nx, int ny, int nz,
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> default_mask = {},
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> category_scratch =
+        {},
+    int hour = 0, int day_of_week = 0);
 
 }  // namespace aces
 

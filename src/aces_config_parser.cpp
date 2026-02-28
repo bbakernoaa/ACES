@@ -72,7 +72,8 @@ AcesConfig ParseConfig(const std::string& filename) {
     // Parse meteorology mapping
     if (root["meteorology"]) {
         for (auto const& met_node : root["meteorology"]) {
-            config.met_mapping[met_node.first.as<std::string>()] = met_node.second.as<std::string>();
+            config.met_mapping[met_node.first.as<std::string>()] =
+                met_node.second.as<std::string>();
         }
     }
 

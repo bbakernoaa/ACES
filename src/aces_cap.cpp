@@ -36,10 +36,10 @@ struct AcesInternalData {
     AcesConfig config;                                          ///< Parsed ACES configuration.
     std::unique_ptr<AcesDiagnosticManager> diagnostic_manager;  ///< Diagnostic manager.
     std::vector<std::unique_ptr<PhysicsScheme>>
-        active_schemes;                    ///< List of active physics plugins.
-    AcesImportState import_state;          ///< Input data views.
-    AcesExportState export_state;          ///< Output emission views.
-    AcesDataIngestor ingestor;             ///< Hybrid data ingestor.
+        active_schemes;            ///< List of active physics plugins.
+    AcesImportState import_state;  ///< Input data views.
+    AcesExportState export_state;  ///< Output emission views.
+    AcesDataIngestor ingestor;     ///< Hybrid data ingestor.
     Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
         default_mask;  ///< Persistent 1.0 mask.
     Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
@@ -141,8 +141,8 @@ AcesStateResolver::ResolveExportDevice(const std::string& name, int nx, int ny, 
         auto view = it->second.view_device();
         if (view.extent(0) != (size_t)nx || view.extent(1) != (size_t)ny ||
             view.extent(2) != (size_t)nz) {
-            std::cerr << "ACES_Resolver Error: Dimension mismatch for export " << name << " (device)"
-                      << std::endl;
+            std::cerr << "ACES_Resolver Error: Dimension mismatch for export " << name
+                      << " (device)" << std::endl;
             return Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>();
         }
         return view;
@@ -270,8 +270,8 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     for (auto const& [species, layers] : data->config.species_layers) {
         std::string export_name = "total_" + species + "_emissions";
         if (data->export_state.fields.find(export_name) == data->export_state.fields.end()) {
-            data->export_state.fields.try_emplace(export_name,
-                                                  GetDualView(exportState, export_name, nx, ny, nz));
+            data->export_state.fields.try_emplace(
+                export_name, GetDualView(exportState, export_name, nx, ny, nz));
         }
     }
 
@@ -344,7 +344,8 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     int day_of_week = 0;
     if (clock != nullptr) {
         // In standard ESMF C API for version 8.8.0:
-        // int ESMC_ClockGet(ESMC_Clock clock, ESMC_TimeInterval *currSimTime, ESMC_I8 *advanceCount);
+        // int ESMC_ClockGet(ESMC_Clock clock, ESMC_TimeInterval *currSimTime, ESMC_I8
+        // *advanceCount);
         ESMC_TimeInterval currSimTime;
         ESMC_I8 advanceCount;
         ESMC_ClockGet(*clock, &currSimTime, &advanceCount);
@@ -353,7 +354,8 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
         ESMC_TimeIntervalGet(currSimTime, &seconds_i8, NULL);
 
         // Scientific Logic Improvement: Diurnal/Weekly cycles tied to simulation time offset.
-        // For production, this should ideally be tied to absolute UTC time from ESMC_ClockGetCurrTime (if available in bridge).
+        // For production, this should ideally be tied to absolute UTC time from
+        // ESMC_ClockGetCurrTime (if available in bridge).
         hour = (int)((seconds_i8 / 3600) % 24);
         day_of_week = (int)((seconds_i8 / 86400) % 7);
     }

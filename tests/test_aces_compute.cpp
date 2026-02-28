@@ -163,6 +163,38 @@ TEST_F(AcesComputeTest, YamlParsing) {
     std::remove("test_config.yaml");
 }
 
+TEST_F(AcesComputeTest, YamlParsingExtended) {
+    std::ofstream out("test_config_ext.yaml");
+    out << "meteorology:\n"
+        << "  temperature: air_temperature\n"
+        << "temporal_cycles:\n"
+        << "  diurnal: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, "
+           "2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3]\n"
+        << "species:\n"
+        << "  nox:\n"
+        << "    - operation: add\n"
+        << "      field: background_nox\n"
+        << "      mask: [mask1, mask2]\n"
+        << "      diurnal_cycle: diurnal\n";
+    out.close();
+
+    AcesConfig config = ParseConfig("test_config_ext.yaml");
+
+    EXPECT_EQ(config.met_mapping["temperature"], "air_temperature");
+    ASSERT_EQ(config.temporal_cycles.count("diurnal"), 1);
+    EXPECT_EQ(config.temporal_cycles["diurnal"].factors.size(), 24);
+    EXPECT_DOUBLE_EQ(config.temporal_cycles["diurnal"].factors[23], 3.3);
+
+    auto layers = config.species_layers["nox"];
+    ASSERT_EQ(layers.size(), 1);
+    EXPECT_EQ(layers[0].masks.size(), 2);
+    EXPECT_EQ(layers[0].masks[0], "mask1");
+    EXPECT_EQ(layers[0].masks[1], "mask2");
+    EXPECT_EQ(layers[0].diurnal_cycle, "diurnal");
+
+    std::remove("test_config_ext.yaml");
+}
+
 TEST_F(AcesComputeTest, HierarchyAndCategory) {
     int nx = 4, ny = 4, nz = 1;
 
@@ -264,12 +296,12 @@ TEST_F(AcesComputeTest, TemporalCycles) {
     // 24 factors for diurnal
     TemporalCycle diurnal;
     diurnal.factors = std::vector<double>(24, 1.0);
-    diurnal.factors[10] = 2.5; // Peak at 10 AM
+    diurnal.factors[10] = 2.5;  // Peak at 10 AM
     config.temporal_cycles["diurnal"] = diurnal;
 
     // 7 factors for weekly
     TemporalCycle weekly;
-    weekly.factors = {1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5}; // Weekend reduction
+    weekly.factors = {1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5};  // Weekend reduction
     config.temporal_cycles["weekly"] = weekly;
 
     // Test Hour 10, Day 0 (Monday) -> scale should be 2.5 * 1.0 = 2.5
@@ -324,6 +356,124 @@ TEST_F(AcesComputeTest, MultipleMasks) {
     auto result = resolver.GetFieldData("total_nox_emissions");
     // Result should be 10.0 * (0.5 * 0.2) = 1.0
     EXPECT_DOUBLE_EQ(result(0, 0, 0), 1.0);
+}
+
+/**
+ * @brief FieldResolver that pulls from the unified AcesImportState and AcesExportState.
+ */
+class AcesStateResolver : public FieldResolver {
+    const AcesImportState& import_state;
+    const AcesExportState& export_state;
+    const std::map<std::string, std::string>& met_mapping;
+
+   public:
+    AcesStateResolver(const AcesImportState& imp, const AcesExportState& exp,
+                      const std::map<std::string, std::string>& mapping)
+        : import_state(imp), export_state(exp), met_mapping(mapping) {}
+
+    UnmanagedHostView3D ResolveImport(const std::string& name, int nx, int ny, int nz) override {
+        std::string resolve_name = name;
+        auto map_it = met_mapping.find(name);
+        if (map_it != met_mapping.end()) {
+            resolve_name = map_it->second;
+        }
+
+        auto it = import_state.fields.find(resolve_name);
+        if (it != import_state.fields.end()) {
+            return it->second.view_host();
+        }
+        return UnmanagedHostView3D();
+    }
+    UnmanagedHostView3D ResolveExport(const std::string& name, int nx, int ny, int nz) override {
+        auto it = export_state.fields.find(name);
+        if (it != export_state.fields.end()) {
+            return it->second.view_host();
+        }
+        return UnmanagedHostView3D();
+    }
+
+    Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
+    ResolveImportDevice(const std::string& name, int nx, int ny, int nz) override {
+        std::string resolve_name = name;
+        auto map_it = met_mapping.find(name);
+        if (map_it != met_mapping.end()) {
+            resolve_name = map_it->second;
+        }
+
+        auto it = import_state.fields.find(resolve_name);
+        if (it != import_state.fields.end()) {
+            return it->second.view_device();
+        }
+        return Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>();
+    }
+
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveExportDevice(
+        const std::string& name, int nx, int ny, int nz) override {
+        auto it = export_state.fields.find(name);
+        if (it != export_state.fields.end()) {
+            return it->second.view_device();
+        }
+        return Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>();
+    }
+};
+
+TEST_F(AcesComputeTest, MeteorologyMappingAndScaling) {
+    int nx = 1, ny = 1, nz = 1;
+
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> emissions_data("emi", nx, ny, nz);
+    Kokkos::deep_copy(emissions_data, 100.0);
+
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> temp_data("temp", nx, ny, nz);
+    Kokkos::deep_copy(temp_data, 1.2);  // Scaling factor from meteorology
+
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> export_data("export", nx, ny,
+                                                                               nz);
+    Kokkos::deep_copy(export_data, 0.0);
+
+    MockFieldResolver resolver;
+    resolver.AddField("base_emi", nx, ny, nz);
+    resolver.SetFieldData("base_emi", emissions_data);
+    resolver.AddField("air_temperature", nx, ny, nz);
+    resolver.SetFieldData("air_temperature", temp_data);
+    resolver.AddField("total_nox_emissions", nx, ny, nz);
+    resolver.SetFieldData("total_nox_emissions", export_data);
+
+    AcesConfig config;
+    config.met_mapping["temperature"] = "air_temperature";
+
+    EmissionLayer layer;
+    layer.operation = "add";
+    layer.field_name = "base_emi";
+    layer.scale_fields = {"temperature"};
+
+    config.species_layers["nox"] = {layer};
+
+    // resolver should use the mapping
+    AcesImportState imp;
+    AcesExportState exp;
+    // We manually populate the state as AcesStateResolver would expect
+    imp.fields["base_emi"] = DualView3D("base_emi", nx, ny, nz);
+    Kokkos::deep_copy(imp.fields["base_emi"].view_host(), emissions_data);
+    imp.fields["base_emi"].modify<Kokkos::HostSpace>();
+    imp.fields["base_emi"].sync<Kokkos::DefaultExecutionSpace::memory_space>();
+
+    imp.fields["air_temperature"] = DualView3D("air_temperature", nx, ny, nz);
+    Kokkos::deep_copy(imp.fields["air_temperature"].view_host(), temp_data);
+    imp.fields["air_temperature"].modify<Kokkos::HostSpace>();
+    imp.fields["air_temperature"].sync<Kokkos::DefaultExecutionSpace::memory_space>();
+
+    exp.fields["total_nox_emissions"] = DualView3D("total_nox_emissions", nx, ny, nz);
+    Kokkos::deep_copy(exp.fields["total_nox_emissions"].view_host(), export_data);
+    exp.fields["total_nox_emissions"].modify<Kokkos::HostSpace>();
+    exp.fields["total_nox_emissions"].sync<Kokkos::DefaultExecutionSpace::memory_space>();
+
+    AcesStateResolver state_resolver(imp, exp, config.met_mapping);
+
+    ComputeEmissions(config, state_resolver, nx, ny, nz);
+
+    exp.fields["total_nox_emissions"].sync<Kokkos::HostSpace>();
+    auto result = exp.fields["total_nox_emissions"].view_host();
+    EXPECT_DOUBLE_EQ(result(0, 0, 0), 120.0);
 }
 
 }  // namespace aces

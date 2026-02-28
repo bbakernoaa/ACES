@@ -28,12 +28,11 @@ namespace aces {
  * @param ny Size of the second grid dimension.
  * @param nz Size of the third grid dimension.
  */
-void ComputeEmissions(const AcesConfig& config, FieldResolver& resolver, int nx, int ny, int nz,
-                      Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
-                          default_mask,
-                      Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
-                          category_scratch,
-                      int hour, int day_of_week) {
+void ComputeEmissions(
+    const AcesConfig& config, FieldResolver& resolver, int nx, int ny, int nz,
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> default_mask,
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> category_scratch,
+    int hour, int day_of_week) {
     // Create local views if persistent ones are not provided.
     if (!default_mask.data()) {
         default_mask = Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>(
@@ -42,8 +41,9 @@ void ComputeEmissions(const AcesConfig& config, FieldResolver& resolver, int nx,
     }
 
     if (!category_scratch.data()) {
-        category_scratch = Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>(
-            "category_scratch_local", nx, ny, nz);
+        category_scratch =
+            Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>(
+                "category_scratch_local", nx, ny, nz);
     }
 
     for (auto const& [species, layers] : config.species_layers) {
