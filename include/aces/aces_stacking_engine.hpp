@@ -68,7 +68,7 @@ class StackingEngine {
         std::vector<CompiledLayer> layers;  ///< Pre-sorted layers for this species.
     };
 
-    AcesConfig m_config;                       ///< Stored configuration.
+    AcesConfig m_config;                      ///< Stored configuration.
     std::vector<CompiledSpecies> m_compiled;  ///< Pre-compiled execution plan.
 
     /**

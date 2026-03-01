@@ -6,7 +6,9 @@
 
 namespace aces {
 
-StackingEngine::StackingEngine(const AcesConfig& config) : m_config(config) { PreCompile(); }
+StackingEngine::StackingEngine(const AcesConfig& config) : m_config(config) {
+    PreCompile();
+}
 
 void StackingEngine::PreCompile() {
     m_compiled.clear();

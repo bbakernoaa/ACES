@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
+
 #include <Kokkos_Core.hpp>
 #include <map>
-#include "aces/aces_stacking_engine.hpp"
-#include "aces/aces_config.hpp"
+
 #include "aces/aces_compute.hpp"
+#include "aces/aces_config.hpp"
+#include "aces/aces_stacking_engine.hpp"
 
 namespace aces {
 
@@ -12,7 +14,8 @@ namespace aces {
  */
 class ActualFieldResolver : public FieldResolver {
     std::map<std::string, DualView3D> fields;
-public:
+
+   public:
     void AddField(const std::string& name, int nx, int ny, int nz) {
         fields[name] = DualView3D("test_" + name, nx, ny, nz);
     }
@@ -26,7 +29,7 @@ public:
 
     double GetValue(const std::string& name) {
         fields[name].sync<Kokkos::HostSpace>();
-        return fields[name].view_host()(0,0,0);
+        return fields[name].view_host()(0, 0, 0);
     }
 
     UnmanagedHostView3D ResolveImport(const std::string& name, int, int, int) override {
@@ -35,16 +38,18 @@ public:
     UnmanagedHostView3D ResolveExport(const std::string& name, int, int, int) override {
         return fields[name].view_host();
     }
-    Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveImportDevice(const std::string& name, int, int, int) override {
+    Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
+    ResolveImportDevice(const std::string& name, int, int, int) override {
         return fields[name].view_device();
     }
-    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveExportDevice(const std::string& name, int, int, int) override {
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveExportDevice(
+        const std::string& name, int, int, int) override {
         return fields[name].view_device();
     }
 };
 
 class StackingEngineTest : public ::testing::Test {
-protected:
+   protected:
     void SetUp() override {
         if (!Kokkos::is_initialized()) Kokkos::initialize();
     }
@@ -71,7 +76,7 @@ TEST_F(StackingEngineTest, HierarchyReplacement) {
     l2.hierarchy = 10;
     l2.scale = 1.0;
 
-    config.species_layers["test_species"] = {l2, l1}; // Intentionally out of order
+    config.species_layers["test_species"] = {l2, l1};  // Intentionally out of order
 
     ActualFieldResolver resolver;
     resolver.AddField("f1", nx, ny, nz);
@@ -108,7 +113,8 @@ TEST_F(StackingEngineTest, DefaultMaskApplication) {
     resolver.SetValue("total_test_species_emissions", 0.0);
 
     // Provide a default mask of 0.5
-    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> dmask("dmask", nx, ny, nz);
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> dmask("dmask", nx,
+                                                                                     ny, nz);
     Kokkos::deep_copy(dmask, 0.5);
 
     StackingEngine engine(config);
@@ -118,4 +124,4 @@ TEST_F(StackingEngineTest, DefaultMaskApplication) {
     EXPECT_DOUBLE_EQ(resolver.GetValue("total_test_species_emissions"), 5.0);
 }
 
-} // namespace aces
+}  // namespace aces
