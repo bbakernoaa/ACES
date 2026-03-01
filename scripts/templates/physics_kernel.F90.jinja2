@@ -1,0 +1,29 @@
+module {{ scheme_name }}_kernel_mod
+    use iso_c_binding
+    implicit none
+
+contains
+
+    subroutine run_{{ scheme_name }}_kernel({% for field in imports %}{{ field.var_name }}_ptr, {% endfor %}{% for field in exports %}{{ field.var_name }}_ptr, {% endfor %}nx, ny, nz) bind(C, name="run_{{ scheme_name }}_fortran")
+        integer(c_int), intent(in), value :: nx, ny, nz
+        {% for field in imports %}
+        real(c_double), intent(in) :: {{ field.var_name }}_ptr(nx, ny, nz)
+        {% endfor %}
+        {% for field in exports %}
+        real(c_double), intent(inout) :: {{ field.var_name }}_ptr(nx, ny, nz)
+        {% endfor %}
+
+        integer :: i, j, k
+
+        !$omp parallel do collapse(3)
+        do k = 1, nz
+            do j = 1, ny
+                do i = 1, nx
+                    ! TODO: Implement legacy physics logic here
+                end do
+            end do
+        end do
+
+    end subroutine run_{{ scheme_name }}_kernel
+
+end module {{ scheme_name }}_kernel_mod

@@ -44,23 +44,23 @@ void AcesDiagnosticManager::WriteDiagnostics(const DiagnosticConfig& config, ESM
         if (seconds % config.output_interval_seconds != 0) return;
     }
 
-    // 2. Grid/Mesh Setup
-    ESMC_Grid target_grid;
-    target_grid.ptr = nullptr;
-    ESMC_Mesh target_mesh;
-    target_mesh.ptr = nullptr;
-
-    if (config.grid_type == "gaussian") {
+    // 2. Grid/Mesh Setup (Cached)
+    if (config.grid_type == "gaussian" && cached_grid_.ptr == nullptr) {
         int counts[2] = {config.nx, config.ny};
         ESMC_InterArrayInt iCounts;
         ESMC_InterArrayIntSet(&iCounts, counts, 2);
         int rc;
-        target_grid = ESMC_GridCreateNoPeriDim(&iCounts, NULL, NULL, NULL, &rc);
-    } else if (config.grid_type == "mesh") {
+        cached_grid_ = ESMC_GridCreateNoPeriDim(&iCounts, NULL, NULL, NULL, &rc);
+    } else if (config.grid_type == "mesh" &&
+               (cached_mesh_.ptr == nullptr || cached_mesh_file_ != config.grid_file)) {
         int rc;
-        target_mesh = ESMC_MeshCreateFromFile(config.grid_file.c_str(), ESMC_FILEFORMAT_SCRIP, NULL,
-                                              NULL, NULL, NULL, NULL, &rc);
+        cached_mesh_ = ESMC_MeshCreateFromFile(config.grid_file.c_str(), ESMC_FILEFORMAT_SCRIP,
+                                               NULL, NULL, NULL, NULL, NULL, &rc);
+        cached_mesh_file_ = config.grid_file;
     }
+
+    ESMC_Grid target_grid = cached_grid_;
+    ESMC_Mesh target_mesh = cached_mesh_;
 
     for (const auto& name : config.variables) {
         auto it = diagnostics_.find(name);

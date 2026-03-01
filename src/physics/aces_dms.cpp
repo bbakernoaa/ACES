@@ -43,24 +43,23 @@ void DMSScheme::Run(AcesImportState& import_state, AcesExportState& export_state
     int nz = dms_emis.extent(2);
 
     Kokkos::parallel_for(
-        "DMSKernel_Faithful",
-        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0},
-                                                                              {nx, ny, nz}),
-        KOKKOS_LAMBDA(int i, int j, int k) {
-            if (k != 0) return;  // Surface restricted
-
-            double tk = tskin(i, j, k);
+        "DMSKernel_Optimized",
+        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<2>>({0, 0}, {nx, ny}),
+        KOKKOS_LAMBDA(int i, int j) {
+            double tk = tskin(i, j, 0);
             double tc = tk - 273.15;
-            double w = u10m(i, j, k);
-            double conc = seaconc(i, j, k);
+            double w = u10m(i, j, 0);
+            double conc = seaconc(i, j, 0);
 
             if (tc < -10.0) return;
 
-            double sc_w = get_sc_w_dms(tc);
-            double k_w = get_kw_nightingale(w, sc_w);  // cm/hr
-            k_w /= 360000.0;                           // cm/hr -> m/s
+            // Horner's Method for Schmidt number
+            double sc_w = 2674.0 + tc * (-147.12 + tc * (3.726 + tc * -0.038));
 
-            dms_emis(i, j, k) += k_w * conc;
+            double k_w = (0.222 * w * w + 0.333 * w) * std::pow(sc_w / 600.0, -0.5);  // cm/hr
+            k_w /= 360000.0;  // cm/hr -> m/s
+
+            dms_emis(i, j, 0) += k_w * conc;
         });
 
     Kokkos::fence();

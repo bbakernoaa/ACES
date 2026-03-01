@@ -1,9 +1,0 @@
-src/aces_compute.cpp:28:0: style: The function 'ComputeEmissions' is never used. [unusedFunction]
-void ComputeEmissions(
-^
-src/aces_stacking_engine.cpp:129:0: style: The function 'ResetBindings' is never used. [unusedFunction]
-void StackingEngine::ResetBindings() {
-^
-nofile:0:0: information: Unmatched suppression: missingInclude [unmatchedSuppression]
-
-nofile:0:0: information: Active checkers: 161/592 (use --checkers-report=<filename> to see details) [checkersReport]

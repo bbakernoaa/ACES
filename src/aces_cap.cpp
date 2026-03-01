@@ -47,6 +47,11 @@ struct AcesInternalData {
         default_mask;                      ///< Persistent 1.0 mask.
     bool kokkos_initialized_here = false;  ///< Flag to track if this component initialized Kokkos.
     bool advertised = false;               ///< Flag to track if the Advertise phase has run.
+
+    // Cached metadata
+    int nx = 0, ny = 0, nz = 0;            ///< Cached grid dimensions.
+    std::vector<std::string> esmf_fields;  ///< Internal names of fields to ingest from ESMF.
+    std::vector<std::string> external_esmf_fields;  ///< External names of fields to ingest.
 };
 
 /**
@@ -163,7 +168,6 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
         }
         data->diagnostic_manager = std::make_unique<AcesDiagnosticManager>();
         data->stacking_engine = std::make_unique<StackingEngine>(data->config);
-        data->stacking_engine->ResetBindings();
 
         // Instantiate requested physics schemes
         for (const auto& scheme_config : data->config.physics_schemes) {
@@ -225,69 +229,42 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     }
     auto* data = static_cast<AcesInternalData*>(data_ptr);
 
-    // Dynamic dimension discovery from actual ESMF fields in the export state.
-    int nx = 0, ny = 0, nz = 0;
-    ESMC_Field field;
-    field.ptr = nullptr;
+    // Dynamic dimension discovery (Cached after first discovery)
+    if (data->nx == 0) {
+        ESMC_Field field;
+        field.ptr = nullptr;
 
-    // Use the first available configured species as a reference for dimensions
-    if (!data->config.species_layers.empty()) {
-        std::string ref_field_name =
-            "total_" + data->config.species_layers.begin()->first + "_emissions";
-        int local_rc = ESMC_StateGetField(exportState, ref_field_name.c_str(), &field);
-        if (local_rc != ESMF_SUCCESS) {
-            std::cerr << "ACES_Run: ESMC_StateGetField failed for " << ref_field_name
-                      << " with rc=" << local_rc << std::endl;
-            field.ptr = nullptr;
+        if (!data->config.species_layers.empty()) {
+            std::string ref_field_name =
+                "total_" + data->config.species_layers.begin()->first + "_emissions";
+            int local_rc = ESMC_StateGetField(exportState, ref_field_name.c_str(), &field);
+            if (local_rc != ESMF_SUCCESS) field.ptr = nullptr;
         }
-    }
 
-    // Fallback: try a generic discovery field if no species are configured yet
-    if (field.ptr == nullptr) {
-        int local_rc = ESMC_StateGetField(exportState, "total_aces_discovery_emissions", &field);
-        if (local_rc != ESMF_SUCCESS) {
-            field.ptr = nullptr;
+        if (field.ptr == nullptr) {
+            ESMC_StateGetField(exportState, "total_aces_discovery_emissions", &field);
         }
-    }
 
-    if (field.ptr) {
-        int lbound[3] = {0, 0, 0};
-        int ubound[3] = {0, 0, 0};
-        int localDe = 0;
-        int local_rc = ESMC_FieldGetBounds(field, &localDe, lbound, ubound, 3);
-        if (local_rc == ESMF_SUCCESS) {
-            nx = ubound[0] - lbound[0] + 1;
-            ny = ubound[1] - lbound[1] + 1;
-            nz = ubound[2] - lbound[2] + 1;
-
-            std::cout << "ACES_Run: Discovered dimensions from ESMF: " << nx << "x" << ny << "x"
-                      << nz << " (lb=" << lbound[0] << "," << lbound[1] << "," << lbound[2]
-                      << " ub=" << ubound[0] << "," << ubound[1] << "," << ubound[2] << ")"
-                      << std::endl;
-
-            // Safety check against uninitialized or junk ESMF bounds
-            if (nx <= 0 || ny <= 0 || nz <= 0 || nx > 10000 || ny > 10000 || nz > 1000) {
-                std::cerr << "ACES_Run: Warning - Invalid discovered dimensions: " << nx << "x"
-                          << ny << "x" << nz << ". Using defaults." << std::endl;
-                nx = 360;
-                ny = 180;
-                nz = 72;
+        if (field.ptr) {
+            int lbound[3] = {0, 0, 0}, ubound[3] = {0, 0, 0}, localDe = 0;
+            if (ESMC_FieldGetBounds(field, &localDe, lbound, ubound, 3) == ESMF_SUCCESS) {
+                data->nx = ubound[0] - lbound[0] + 1;
+                data->ny = ubound[1] - lbound[1] + 1;
+                data->nz = ubound[2] - lbound[2] + 1;
             }
-        } else {
-            std::cerr << "ACES_Run: ESMC_FieldGetBounds failed with rc=" << local_rc << std::endl;
-            nx = 360;
-            ny = 180;
-            nz = 72;
         }
-    } else {
-        // Fallback for cases with empty configuration or missing expected fields
-        nx = 360;
-        ny = 180;
-        nz = 72;
-        std::cerr << "ACES_Run: Warning - Could not discover grid dimensions, "
-                     "using defaults "
-                  << nx << "x" << ny << "x" << nz << std::endl;
+
+        // Final safety fallback
+        if (data->nx <= 0) {
+            data->nx = 360;
+            data->ny = 180;
+            data->nz = 72;
+        }
     }
+
+    int nx = data->nx;
+    int ny = data->ny;
+    int nz = data->nz;
 
     // Lazily initialize persistent DualViews for export state.
     for (auto const& [species, layers] : data->config.species_layers) {
@@ -309,68 +286,50 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
         Kokkos::deep_copy(data->default_mask, 1.0);
     }
 
-    // Hybrid data ingestion:
-    // 1. Meteorology/State from ESMF
-    std::set<std::string> esmf_fields_set;
-    std::set<std::string> cdeps_fields;
-    for (const auto& s : data->config.cdeps_config.streams) cdeps_fields.insert(s.name);
+    // Hybrid data ingestion (Metadata cached after first run)
+    if (data->esmf_fields.empty()) {
+        std::set<std::string> esmf_fields_set;
+        std::set<std::string> cdeps_fields;
+        for (const auto& s : data->config.cdeps_config.streams) cdeps_fields.insert(s.name);
 
-    for (auto const& [species, layers] : data->config.species_layers) {
-        for (const auto& layer : layers) {
-            auto resolve_name = [&](const std::string& name) {
-                auto it = data->config.met_mapping.find(name);
-                if (it != data->config.met_mapping.end()) return it->second;
-                it = data->config.scale_factor_mapping.find(name);
-                if (it != data->config.scale_factor_mapping.end()) return it->second;
-                it = data->config.mask_mapping.find(name);
-                if (it != data->config.mask_mapping.end()) return it->second;
-                return name;
-            };
+        auto resolve_name = [&](const std::string& name) {
+            auto it = data->config.met_mapping.find(name);
+            if (it != data->config.met_mapping.end()) return it->second;
+            it = data->config.scale_factor_mapping.find(name);
+            if (it != data->config.scale_factor_mapping.end()) return it->second;
+            it = data->config.mask_mapping.find(name);
+            if (it != data->config.mask_mapping.end()) return it->second;
+            return name;
+        };
 
-            if (cdeps_fields.find(resolve_name(layer.field_name)) == cdeps_fields.end()) {
-                esmf_fields_set.insert(layer.field_name);
-            }
-
-            for (const auto& sf : layer.scale_fields) {
-                if (cdeps_fields.find(resolve_name(sf)) == cdeps_fields.end()) {
-                    esmf_fields_set.insert(sf);
+        for (auto const& [species, layers] : data->config.species_layers) {
+            for (const auto& layer : layers) {
+                if (cdeps_fields.find(resolve_name(layer.field_name)) == cdeps_fields.end()) {
+                    esmf_fields_set.insert(layer.field_name);
                 }
-            }
-
-            for (const auto& m : layer.masks) {
-                if (cdeps_fields.find(resolve_name(m)) == cdeps_fields.end()) {
-                    esmf_fields_set.insert(m);
+                for (const auto& sf : layer.scale_fields) {
+                    if (cdeps_fields.find(resolve_name(sf)) == cdeps_fields.end()) {
+                        esmf_fields_set.insert(sf);
+                    }
+                }
+                for (const auto& m : layer.masks) {
+                    if (cdeps_fields.find(resolve_name(m)) == cdeps_fields.end()) {
+                        esmf_fields_set.insert(m);
+                    }
                 }
             }
         }
+
+        data->esmf_fields.assign(esmf_fields_set.begin(), esmf_fields_set.end());
+        for (const auto& internal_name : data->esmf_fields) {
+            data->external_esmf_fields.push_back(resolve_name(internal_name));
+        }
     }
-    std::vector<std::string> esmf_fields(esmf_fields_set.begin(), esmf_fields_set.end());
 
     Kokkos::Profiling::pushRegion("ACES_DataIngestion");
 
-    // Apply mappings to get external names for ESMF ingestion
-    std::vector<std::string> external_esmf_fields;
-    for (const auto& internal_name : esmf_fields) {
-        auto it = data->config.met_mapping.find(internal_name);
-        if (it != data->config.met_mapping.end()) {
-            external_esmf_fields.push_back(it->second);
-            continue;
-        }
-        it = data->config.scale_factor_mapping.find(internal_name);
-        if (it != data->config.scale_factor_mapping.end()) {
-            external_esmf_fields.push_back(it->second);
-            continue;
-        }
-        it = data->config.mask_mapping.find(internal_name);
-        if (it != data->config.mask_mapping.end()) {
-            external_esmf_fields.push_back(it->second);
-            continue;
-        }
-        external_esmf_fields.push_back(internal_name);
-    }
-
-    data->ingestor.IngestMeteorology(importState, external_esmf_fields, data->import_state, nx, ny,
-                                     nz);
+    data->ingestor.IngestMeteorology(importState, data->external_esmf_fields, data->import_state,
+                                     nx, ny, nz);
 
     // 2. Emissions from CDEPS
     if (!data->config.cdeps_config.streams.empty()) {
@@ -398,8 +357,7 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     Kokkos::Profiling::pushRegion("ACES_StackingEngine");
     AcesStateResolver resolver(data->import_state, data->export_state, data->config.met_mapping,
                                data->config.scale_factor_mapping, data->config.mask_mapping);
-    ComputeEmissions(data->config, resolver, nx, ny, nz, data->default_mask, hour, day_of_week,
-                     data->stacking_engine.get());
+    data->stacking_engine->Execute(resolver, nx, ny, nz, data->default_mask, hour, day_of_week);
     Kokkos::Profiling::popRegion();
 
     auto& imp = data->import_state;
@@ -415,7 +373,15 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     // Write diagnostics
     Kokkos::Profiling::pushRegion("ACES_Writeback");
     if (clock != nullptr) {
-        data->diagnostic_manager->WriteDiagnostics(data->config.diagnostics, *clock, field);
+        ESMC_Field template_field;
+        template_field.ptr = nullptr;
+        if (!data->config.species_layers.empty()) {
+            std::string ref_field_name =
+                "total_" + data->config.species_layers.begin()->first + "_emissions";
+            ESMC_StateGetField(exportState, ref_field_name.c_str(), &template_field);
+        }
+        data->diagnostic_manager->WriteDiagnostics(data->config.diagnostics, *clock,
+                                                   template_field);
     }
 
     // Sync results back to host space
@@ -446,6 +412,11 @@ void Finalize(ESMC_GridComp comp, ESMC_State /*importState*/, ESMC_State /*expor
             data->ingestor.FinalizeCDEPS();
 
             // Clear active schemes and states to ensure Views are destroyed
+            for (auto& scheme : data->active_schemes) {
+                if (auto* base = dynamic_cast<BasePhysicsScheme*>(scheme.get())) {
+                    base->ClearPhysicsCache();
+                }
+            }
             data->active_schemes.clear();
             data->import_state.fields.clear();
             data->export_state.fields.clear();

@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "aces/aces_diagnostics.hpp"
 #include "aces/aces_state.hpp"
@@ -58,32 +59,57 @@ class BasePhysicsScheme : public PhysicsScheme {
    protected:
     /**
      * @brief Helper to resolve an import field's device-side View.
+     * @details Caches the View to avoid redundant map lookups.
      * @param name Name of the field.
      * @param state The import state.
      * @return A device-side Kokkos::View.
      */
-    auto ResolveImport(const std::string& name, AcesImportState& state) {
+    Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveImport(
+        const std::string& name, AcesImportState& state) {
+        if (auto it = import_cache_.find(name); it != import_cache_.end()) {
+            return it->second;
+        }
         auto it = state.fields.find(name);
         if (it != state.fields.end()) {
-            return it->second.view_device();
+            auto view = it->second.view_device();
+            import_cache_[name] = view;
+            return view;
         }
-        return DualView3D::t_dev();
+        return Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>();
     }
 
     /**
      * @brief Helper to resolve an export field's device-side View.
+     * @details Caches the View to avoid redundant map lookups.
      * @param name Name of the field.
      * @param state The export state.
      * @return A device-side Kokkos::View.
      */
-    auto ResolveExport(const std::string& name, AcesExportState& state) {
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveExport(
+        const std::string& name, AcesExportState& state) {
+        if (auto it = export_cache_.find(name); it != export_cache_.end()) {
+            return it->second;
+        }
         auto it = state.fields.find(name);
         if (it != state.fields.end()) {
-            return it->second.view_device();
+            auto view = it->second.view_device();
+            export_cache_[name] = view;
+            return view;
         }
-        return DualView3D::t_dev();
+        return Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>();
     }
 
+    /**
+     * @brief Clears the cached field handles.
+     * @details Call this if the underlying state pointers change.
+     */
+   public:
+    void ClearPhysicsCache() {
+        import_cache_.clear();
+        export_cache_.clear();
+    }
+
+   protected:
     /**
      * @brief Marks an export field as modified on the device.
      * @param name Name of the field.
@@ -95,6 +121,14 @@ class BasePhysicsScheme : public PhysicsScheme {
             it->second.modify_device();
         }
     }
+
+   private:
+    std::unordered_map<std::string, Kokkos::View<const double***, Kokkos::LayoutLeft,
+                                                 Kokkos::DefaultExecutionSpace>>
+        import_cache_;
+    std::unordered_map<std::string,
+                       Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>>
+        export_cache_;
 };
 
 }  // namespace aces

@@ -24,6 +24,7 @@ void StackingEngine::PreCompile() {
     for (auto const& [species, layers] : m_config.species_layers) {
         CompiledSpecies spec;
         spec.name = species;
+        spec.export_name = "total_" + species + "_emissions";
         for (auto const& layer : layers) {
             spec.layers.push_back({layer.field_name, layer.operation, layer.scale, layer.hierarchy,
                                    layer.masks, layer.scale_fields, layer.diurnal_cycle,
@@ -56,6 +57,8 @@ void StackingEngine::PreCompile() {
 void StackingEngine::BindFields(CompiledSpecies& spec, FieldResolver& resolver, int nx, int ny,
                                 int nz) {
     if (spec.fields_bound) return;
+
+    spec.export_field = resolver.ResolveExportDevice(spec.export_name, nx, ny, nz);
 
     for (size_t i = 0; i < spec.layers.size(); ++i) {
         const auto& layer = spec.layers[i];
@@ -157,16 +160,19 @@ void StackingEngine::Execute(
     }
 
     for (auto& spec : m_compiled) {
-        std::string export_name = "total_" + spec.name + "_emissions";
-        auto total_view = resolver.ResolveExportDevice(export_name, nx, ny, nz);
-
-        if (total_view.data() == nullptr || spec.layers.empty()) {
+        if (spec.layers.empty()) {
             continue;
         }
 
         BindFields(spec, resolver, nx, ny, nz);
+
+        if (spec.export_field.data() == nullptr) {
+            continue;
+        }
+
         UpdateTemporalScales(spec, hour, day_of_week);
 
+        auto total_view = spec.export_field;
         Kokkos::deep_copy(total_view, 0.0);
 
         auto layers = spec.device_layers;

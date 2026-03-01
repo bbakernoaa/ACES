@@ -1,0 +1,46 @@
+#include "aces/physics/{{ header_name }}"
+
+#include <Kokkos_Core.hpp>
+#include <iostream>
+
+#include "aces/aces_physics_factory.hpp"
+
+namespace aces {
+
+/// Self-registration for the {{ class_name }} scheme.
+static PhysicsRegistration<{{ class_name }}> register_scheme("{{ scheme_name }}");
+
+void {{ class_name }}::Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) {
+    std::cout << "{{ class_name }}: Initialized." << std::endl;
+}
+
+void {{ class_name }}::Run(AcesImportState& import_state, AcesExportState& export_state) {
+    // Resolve handles (leveraging BasePhysicsScheme caching)
+    {% for field in imports %}
+    auto {{ field.var_name }} = ResolveImport("{{ field.name }}", import_state);
+    {% endfor %}
+    {% for field in exports %}
+    auto {{ field.var_name }} = ResolveExport("{{ field.name }}", export_state);
+    {% endfor %}
+
+    if ({% for field in imports %}{{ field.var_name }}.data() == nullptr || {% endfor %}{% for field in exports %}{{ field.var_name }}.data() == nullptr {% if not loop.last %}|| {% endif %}{% endfor %}) {
+        return;
+    }
+
+    int nx = {{ exports[0].var_name }}.extent(0);
+    int ny = {{ exports[0].var_name }}.extent(1);
+
+    Kokkos::parallel_for(
+        "{{ class_name }}Kernel",
+        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<2>>({0, 0}, {nx, ny}),
+        KOKKOS_LAMBDA(int i, int j) {
+            // TODO: Implement physics logic here
+        });
+
+    Kokkos::fence();
+    {% for field in exports %}
+    MarkModified("{{ field.name }}", export_state);
+    {% endfor %}
+}
+
+}  // namespace aces

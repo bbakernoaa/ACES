@@ -60,9 +60,10 @@ else()
 endif()
 
 if(ACES_USE_MOCK_ESMF)
-  add_library(ESMF::ESMF INTERFACE IMPORTED)
-  target_compile_definitions(ESMF::ESMF INTERFACE ACES_USE_MOCK_ESMF)
-  target_include_directories(ESMF::ESMF INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/mock_esmf)
+  add_library(mock_esmf STATIC src/mock_esmf.cpp)
+  add_library(ESMF::ESMF ALIAS mock_esmf)
+  target_compile_definitions(mock_esmf INTERFACE ACES_USE_MOCK_ESMF)
+  target_include_directories(mock_esmf PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mock_esmf)
   set(ESMF_FOUND TRUE)
   # Mock CDEPS if needed or skip parts that require it
   set(CDEPS_FOUND TRUE)
