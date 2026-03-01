@@ -1,0 +1,3 @@
+&cdeps_nml
+  stream_file = 'aces_emissions.streams'
+/
