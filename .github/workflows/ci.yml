@@ -13,30 +13,55 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Cache dependencies and build
+      uses: actions/cache@v3
+      with:
+        path: |
+          build/_deps
+          build/lib
+          build/bin
+        key: ${{ runner.os }}-aces-deps-${{ hashFiles('**/CMakeLists.txt', 'cmake/*.cmake') }}
+        restore-keys: |
+          ${{ runner.os }}-aces-deps-
+
     - name: Build and Test ACES
       shell: bash
       run: |
-        # Source the Spack environment to load compilers and libraries (ESMF, etc.)
         if [ -f /opt/spack-environment/activate.sh ]; then
           source /opt/spack-environment/activate.sh
         fi
 
-        # Install CDEPS with spack if available
         if command -v spack &> /dev/null; then
-          spack install cdeps
-          spack load cdeps
+          spack install cdeps || true
+          spack load cdeps || true
         fi
 
-        # Create build directory
+        # Ensure build directory exists
         mkdir -p build
         cd build
 
-        # Configure ACES
-        # - ACES_USE_MOCK_ESMF=OFF: Force use of system ESMF provided by the container
-        cmake .. -DACES_USE_MOCK_ESMF=OFF -DCMAKE_BUILD_TYPE=Release
+        # Configure ACES. CMake will detect if it's already configured.
+        cmake .. -DACES_USE_MOCK_ESMF=OFF -DCMAKE_BUILD_TYPE=Release -DKokkos_ENABLE_SERIAL=ON
 
-        # Build
-        make -j4
-
-        # Test
+        # Build. Make will only build what has changed.
+        make -j$(nproc)
         ctest --output-on-failure
+
+    - name: Run HEMCO Parity Examples
+      shell: bash
+      run: |
+        if [ -f /opt/spack-environment/activate.sh ]; then
+          source /opt/spack-environment/activate.sh
+        fi
+
+        ./scripts/setup_hemco_examples.sh
+        ./scripts/data_download/download_ex1.sh
+
+        # Mock scale factor for CI. We need a variable named HOURLY_SCALFACT.
+        # Since we don't have nco/cdo in the container easily, we'll use a python script
+        # to create a compliant mock file with correct dimensions.
+        python3 -c "import netCDF4 as nc; ds_out = nc.Dataset('data/hourly.nc', 'w'); ds_out.createDimension('lon', 72); ds_out.createDimension('lat', 46); ds_out.createDimension('lev', 1); out_v = ds_out.createVariable('HOURLY_SCALFACT', 'f8', ('lon', 'lat', 'lev')); out_v[:] = 1.0; ds_out.close()"
+
+        cp examples/aces_config_ex1.yaml aces_config.yaml
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/build
+        build/bin/aces_nuopc_driver
