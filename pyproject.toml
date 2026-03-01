@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aces-tools"
+version = "0.1.0"
+description = "Tools and scripts for the ACES (Atmospheric Chemistry Emissions Stacker) component."
+requires-python = ">=3.8"
+dependencies = [
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
