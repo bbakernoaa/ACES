@@ -14,6 +14,7 @@
 
 extern "C" {
 void ACES_SetServices(ESMC_GridComp comp, int* rc);
+void ACES_Advertise(ESMC_GridComp comp, int* rc);
 void ACES_Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState,
                      ESMC_Clock* clock, int* rc);
 void ACES_Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESMC_Clock* clock,
@@ -46,9 +47,9 @@ int main(int argc, char** argv) {
     CHECK_RC(rc, "ESMC_CalendarCreate failed");
 
     ESMC_Time startTime, stopTime;
-    rc = ESMC_TimeSet(&startTime, 2024, 0, cal, ESMC_CALKIND_GREGORIAN, 0);
+    rc = ESMC_TimeSet(&startTime, 2024, 1, cal, ESMC_CALKIND_GREGORIAN, 0);
     CHECK_RC(rc, "ESMC_TimeSet (startTime) failed");
-    rc = ESMC_TimeSet(&stopTime, 2024, 24, cal, ESMC_CALKIND_GREGORIAN, 0);
+    rc = ESMC_TimeSet(&stopTime, 2024, 12, cal, ESMC_CALKIND_GREGORIAN, 0);
     CHECK_RC(rc, "ESMC_TimeSet (stopTime) failed");
 
     ESMC_TimeInterval timeStep;
@@ -89,9 +90,12 @@ int main(int argc, char** argv) {
 
     // 7. Initialize ACES component
     std::cout << "[NUOPC Driver] Initializing ACES component..." << std::endl;
-    int rc_internal = 0;
 
     // For manual testing without full NUOPC driver, we call the entry points directly
+    // First, the Advertise phase to ensure we don't bypass it.
+    ACES_Advertise(acesComp, &rc);
+    CHECK_RC(rc, "ACES_Advertise failed");
+
     ACES_Initialize(acesComp, importState, exportState, &clock, &rc);
     CHECK_RC(rc, "ACES_Initialize failed");
 

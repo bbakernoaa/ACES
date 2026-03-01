@@ -64,9 +64,55 @@ static DualView3D GetDualView(ESMC_State state, const std::string& name, int nx,
 }
 
 /**
+ * @brief Internal implementation of the Advertise specialization.
+ */
+void Advertise(ESMC_GridComp comp, int* rc) {
+    std::cout << "ACES_Advertise: Entering." << std::endl;
+    int rc_internal;
+    void* data_ptr = ESMC_GridCompGetInternalState(comp, &rc_internal);
+    if (!data_ptr) {
+        // Internal state might not be set yet if Advertise is called before Initialize
+        // In NUOPC, we usually parse config in Initialize.
+        // If we need to advertise, we might need to parse config here too.
+        AcesConfig config = aces::ParseConfig("aces_config.yaml");
+
+        ESMC_State importState = NUOPC_ModelGetImportState(comp, &rc_internal);
+        if (importState.ptr) {
+            for (auto const& [internal_name, external_name] : config.met_mapping) {
+                NUOPC_Advertise(importState, external_name.c_str(), external_name.c_str());
+            }
+        }
+
+        ESMC_State exportState = NUOPC_ModelGetExportState(comp, &rc_internal);
+        if (exportState.ptr) {
+            for (auto const& [species, layers] : config.species_layers) {
+                std::string export_name = "total_" + species + "_emissions";
+                NUOPC_Advertise(exportState, export_name.c_str(), export_name.c_str());
+            }
+        }
+    } else {
+        auto data = static_cast<AcesInternalData*>(data_ptr);
+        ESMC_State importState = NUOPC_ModelGetImportState(comp, &rc_internal);
+        if (importState.ptr) {
+            for (auto const& [internal_name, external_name] : data->config.met_mapping) {
+                NUOPC_Advertise(importState, external_name.c_str(), external_name.c_str());
+            }
+        }
+        ESMC_State exportState = NUOPC_ModelGetExportState(comp, &rc_internal);
+        if (exportState.ptr) {
+            for (auto const& [species, layers] : data->config.species_layers) {
+                std::string export_name = "total_" + species + "_emissions";
+                NUOPC_Advertise(exportState, export_name.c_str(), export_name.c_str());
+            }
+        }
+    }
+    if (rc) *rc = ESMF_SUCCESS;
+}
+
+/**
  * @brief Internal implementation of Initialize phase.
  */
-void Initialize(ESMC_GridComp comp, ESMC_State /*importState*/, ESMC_State /*exportState*/,
+void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState,
                 ESMC_Clock* /*clock*/, int* rc) {
     std::cout << "ACES_Initialize: Entering." << std::endl;
     bool kokkos_initialized_here = false;
@@ -97,21 +143,16 @@ void Initialize(ESMC_GridComp comp, ESMC_State /*importState*/, ESMC_State /*exp
         // Initialize CDEPS if configured
         data->ingestor.InitializeCDEPS(data->config.cdeps_config);
 
-        // Advertise meteorology and emission fields in the ESMF framework using
-        // NUOPC API.
-        ESMC_State importState_real = NUOPC_ModelGetImportState(comp, NULL);
-        if (importState_real.ptr) {
-            for (auto const& [internal_name, external_name] : data->config.met_mapping) {
-                NUOPC_Advertise(importState_real, external_name.c_str(), external_name.c_str());
-            }
+        // Advertise meteorology and emission fields in the ESMF framework.
+        // This is primarily for the standalone driver or non-NUOPC environments.
+        // In a full NUOPC environment, this is also handled by the Advertise specialization.
+        for (auto const& [internal_name, external_name] : data->config.met_mapping) {
+            NUOPC_Advertise(importState, external_name.c_str(), external_name.c_str());
         }
 
-        ESMC_State exportState_real = NUOPC_ModelGetExportState(comp, NULL);
-        if (exportState_real.ptr) {
-            for (auto const& [species, layers] : data->config.species_layers) {
-                std::string export_name = "total_" + species + "_emissions";
-                NUOPC_Advertise(exportState_real, export_name.c_str(), export_name.c_str());
-            }
+        for (auto const& [species, layers] : data->config.species_layers) {
+            std::string export_name = "total_" + species + "_emissions";
+            NUOPC_Advertise(exportState, export_name.c_str(), export_name.c_str());
         }
 
         ESMC_GridCompSetInternalState(comp, data);
@@ -368,8 +409,26 @@ void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State export
  * @brief Standard NUOPC SetServices routine.
  * Registers standard ESMF entry points.
  */
+void ACES_Advertise(ESMC_GridComp comp, int* rc) {
+    aces::Advertise(comp, rc);
+}
+
+/**
+ * @brief Standard NUOPC SetServices routine.
+ * Registers standard ESMF entry points.
+ */
 void ACES_SetServices(ESMC_GridComp comp, int* rc) {
     std::cout << "ACES_SetServices: Entering." << std::endl;
+
+    // Register the component as a NUOPC Model
+    int local_rc = NUOPC_CompDerive(comp, NUOPC_ModelSetServices);
+    if (local_rc != ESMF_SUCCESS) {
+        if (rc) *rc = local_rc;
+        return;
+    }
+
+    // Specialize Advertise phase
+    NUOPC_CompSpecialize(comp, label_Advertise, ACES_Advertise);
 
     // Register standard ESMF entry points.
     ESMC_GridCompSetEntryPoint(comp, ESMF_METHOD_INITIALIZE, ACES_Initialize, 1);
