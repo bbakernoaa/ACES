@@ -5,8 +5,8 @@ import os
 
 class HemcoParser:
     def __init__(self, hemco_config_path):
-        self.config_path = hemco_config_path
-        self.base_dir = os.path.dirname(hemco_config_path)
+        self.config_path = os.path.abspath(hemco_config_path)
+        self.base_dir = os.path.dirname(self.config_path)
         self.settings = {}
         self.base_emissions = []
         self.scale_factors = {}
@@ -19,13 +19,30 @@ class HemcoParser:
             return line[:line.find('#')].strip()
         return line.strip()
 
-    def parse(self):
-        if not os.path.exists(self.config_path):
-            print(f"Warning: HEMCO config file {self.config_path} not found.")
-            return
+    def load_lines(self, filepath, current_base_dir):
+        if not os.path.isabs(filepath):
+            filepath = os.path.join(current_base_dir, filepath)
 
-        with open(self.config_path, 'r') as f:
-            lines = f.readlines()
+        if not os.path.exists(filepath):
+            print(f"Warning: file {filepath} not found.")
+            return []
+
+        new_base_dir = os.path.dirname(filepath)
+        all_lines = []
+        with open(filepath, 'r') as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped.startswith('>>>include'):
+                    inc_file = stripped.split()[-1]
+                    all_lines.extend(self.load_lines(inc_file, new_base_dir))
+                else:
+                    all_lines.append(line)
+        return all_lines
+
+    def parse(self):
+        lines = self.load_lines(self.config_path, self.base_dir)
+        if not lines:
+            return
 
         current_section = None
         for line in lines:
@@ -33,17 +50,17 @@ class HemcoParser:
             line = self.strip_comments(raw_line)
 
             if not line:
-                if 'BEGIN SECTION SETTINGS' in raw_line:
+                if 'BEGIN SECTION SETTINGS' in raw_line.upper():
                     current_section = 'SETTINGS'
-                elif 'BEGIN SECTION EXTENSION SWITCHES' in raw_line:
+                elif 'BEGIN SECTION EXTENSION SWITCHES' in raw_line.upper():
                     current_section = 'EXTENSIONS'
-                elif 'BEGIN SECTION BASE EMISSIONS' in raw_line:
+                elif 'BEGIN SECTION BASE EMISSIONS' in raw_line.upper():
                     current_section = 'BASE_EMISSIONS'
-                elif 'BEGIN SECTION SCALE FACTORS' in raw_line:
+                elif 'BEGIN SECTION SCALE FACTORS' in raw_line.upper():
                     current_section = 'SCALE_FACTORS'
-                elif 'BEGIN SECTION MASKS' in raw_line:
+                elif 'BEGIN SECTION MASKS' in raw_line.upper():
                     current_section = 'MASKS'
-                elif 'END SECTION' in raw_line:
+                elif 'END SECTION' in raw_line.upper():
                     current_section = None
                 continue
 
@@ -53,7 +70,6 @@ class HemcoParser:
                     self.settings[key.strip()] = value.strip()
 
             elif current_section == 'EXTENSIONS':
-                # Status might have a colon if it's "--> NAME : status"
                 line = line.replace('-->', '').strip()
                 if ':' in line:
                     parts = line.split(':')
@@ -162,6 +178,7 @@ class GridParser:
 def convert_hemco_to_aces(hemco_config_path, output_path):
     parser = HemcoParser(hemco_config_path)
     base_dir = parser.base_dir
+    root_val = parser.settings.get('ROOT', 'data')
 
     aces_config = {
         'meteorology': {},
@@ -171,28 +188,17 @@ def convert_hemco_to_aces(hemco_config_path, output_path):
     }
 
     # Identify enabled extensions
-    enabled_ext_nrs = {'0'} # Base is always enabled
+    enabled_ext_nrs = {'0'}
     for name, info in parser.extensions.items():
         if info.get('status') in ['on', 'true', 'yes']:
             if 'nr' in info:
                 enabled_ext_nrs.add(info['nr'])
-            # Some extensions might be sub-items of Base (ExtNr 0)
-            # HEMCO uses brackets or names to enable them.
-            # For simplicity, we'll assume they are handled by checking info['status']
 
     # Map Base Emissions to Species Layers
     streams = {}
 
     for be in parser.base_emissions:
-        # Identify associated extension name for this entry if it's within a collection bracket
-        # (For now, just check if it's assigned to an extension in the switcher)
-
-        # Filter by enabled extensions
-        # ext_nr = 0 is Base.
-        # If it's another number, check if that number is enabled.
         if be['ext_nr'] != '0' and be['ext_nr'] not in enabled_ext_nrs:
-            # Check if there is an extension name that matches and is on/off
-            # HEMCO also allows enabling by name in the switches
             is_enabled = False
             for ext_name, info in parser.extensions.items():
                 if info.get('nr') == be['ext_nr'] and info.get('status') in ['on', 'true', 'yes']:
@@ -202,7 +208,7 @@ def convert_hemco_to_aces(hemco_config_path, output_path):
                 continue
 
         species_name = be['species'].lower()
-        if species_name == '*': continue # Skip wildcard species for now
+        if species_name == '*': continue
 
         if species_name not in aces_config['species']:
             aces_config['species'][species_name] = []
@@ -215,7 +221,6 @@ def convert_hemco_to_aces(hemco_config_path, output_path):
             'hierarchy': int(be['hier'])
         }
 
-        # Handle Scale IDs (Scale Factors and Masks)
         scal_ids = be['scal_ids'].split('/')
         layer_masks = []
         layer_scale_fields = []
@@ -232,7 +237,6 @@ def convert_hemco_to_aces(hemco_config_path, output_path):
                 sf_entry = parser.scale_factors[sid]
                 sf_name = sf_entry['name']
 
-                # Check if it's a temporal cycle (constant values in file column)
                 if '/' in sf_entry['file'] and sf_entry['var'] == '-':
                     try:
                         values = [float(x) for x in sf_entry['file'].split('/')]
@@ -246,7 +250,6 @@ def convert_hemco_to_aces(hemco_config_path, output_path):
                         else:
                             aces_config['temporal_cycles'][cycle_name] = values
                     except ValueError:
-                        # Not a list of floats, probably a file path with slashes
                         layer_scale_fields.append(sf_name.lower())
                         if sf_entry['file'] != '-':
                             streams[sf_name] = sf_entry['file']
@@ -267,33 +270,29 @@ def convert_hemco_to_aces(hemco_config_path, output_path):
 
     # Build CDEPS streams
     for name, file in streams.items():
-        clean_file = file.replace('$ROOT/', 'data/').replace('$ROOT', 'data')
+        clean_file = file.replace('$ROOT/', root_val + '/').replace('$ROOT', root_val)
         aces_config['cdeps_inline_config']['streams'].append({
             'name': name,
             'file': clean_file
         })
 
-    # Meteorology mapping
     for sf_id, sf in parser.scale_factors.items():
         if 'met' in sf['name'].lower() or 'hourly' in sf['name'].lower():
             aces_config['meteorology'][sf['name'].lower()] = sf['name']
 
-    # Diagnostics and Grid
     diagnostics = {}
 
-    # Grid parsing
     grid_file = parser.settings.get('GridFile')
     if grid_file:
         full_grid_path = os.path.join(base_dir, grid_file) if not os.path.isabs(grid_file) else grid_file
         grid_parser = GridParser(full_grid_path)
         if grid_parser.grid_params:
-            diagnostics['grid_type'] = 'gaussian' # Default assumption
+            diagnostics['grid_type'] = 'gaussian'
             if 'NLON' in grid_parser.grid_params:
                 diagnostics['nx'] = int(grid_parser.grid_params['NLON'])
             if 'NLAT' in grid_parser.grid_params:
                 diagnostics['ny'] = int(grid_parser.grid_params['NLAT'])
 
-    # Default values if not found
     if 'output_interval' not in diagnostics:
         diag_freq = parser.settings.get('DiagnFreq', '00000000 010000')
         try:
@@ -309,7 +308,6 @@ def convert_hemco_to_aces(hemco_config_path, output_path):
         except:
             diagnostics['output_interval'] = 3600
 
-    # DiagnFile parsing
     diagn_file = parser.settings.get('DiagnFile')
     if diagn_file:
         full_diagn_path = os.path.join(base_dir, diagn_file) if not os.path.isabs(diagn_file) else diagn_file
