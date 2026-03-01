@@ -39,3 +39,18 @@ def test_hemco_to_aces_cli_error():
     result = subprocess.run([sys.executable, script], capture_output=True, text=True)
     assert result.returncode != 0
     assert "the following arguments are required" in result.stderr
+
+def test_visualize_stack_cli(tmp_path):
+    script = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'scripts', 'visualize_stack.py'))
+
+    # Create a dummy config
+    config = tmp_path / "test_config.yaml"
+    config.write_text("species:\n  NO2:\n    - operation: add\n      hierarchy: 1\n      field: f1\n")
+
+    # Test CLI execution
+    # Note: we might want to mock matplotlib to avoid GUI/window issues if it was a real environment,
+    # but here it's likely headless. We'll just check if it runs without error.
+    result = subprocess.run([sys.executable, script, str(config)], capture_output=True, text=True)
+    assert result.returncode == 0
+    assert "--- Stacking Plan for NO2 ---" in result.stdout
+    assert "Saved stacking plan visualization" in result.stdout

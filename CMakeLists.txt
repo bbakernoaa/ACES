@@ -210,6 +210,7 @@ set(ACES_SRCS
   src/aces_cap.cpp
   src/aces_config_parser.cpp
   src/aces_compute.cpp
+  src/aces_stacking_engine.cpp
   src/aces_physics_factory.cpp
   src/physics/aces_native_example.cpp
   src/physics/aces_sea_salt.cpp
@@ -341,6 +342,16 @@ target_link_libraries(test_hemco_mimic
   GTest::gtest_main
 )
 
+add_executable(test_stacking_engine
+  tests/test_stacking_engine.cpp
+)
+
+target_link_libraries(test_stacking_engine
+  PRIVATE
+  aces
+  GTest::gtest_main
+)
+
 add_executable(example_driver
   tests/example_driver.cpp
 )
@@ -376,6 +387,7 @@ endif()
 
 include(GoogleTest)
 gtest_discover_tests(test_aces_cap)
+gtest_discover_tests(test_stacking_engine)
 gtest_discover_tests(test_aces_utils)
 gtest_discover_tests(test_aces_compute)
 gtest_discover_tests(test_physics)
