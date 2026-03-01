@@ -13,8 +13,10 @@
       
       
       
-        <link rel="prev" href="../migration_examples/">
+        <link rel="prev" href="./..">
       
+      
+        <link rel="next" href="../users-guide/">
       
       
         
@@ -25,7 +27,7 @@
     
     
       
-        <title>API Reference - ACES Documentation</title>
+        <title>Core Concepts - ACES Documentation</title>
       
     
     
@@ -81,7 +83,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#api-reference" class="md-skip">
+        <a href="#core-concepts" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              API Reference
+              Core Concepts
             
           </span>
         </div>
@@ -238,10 +240,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../concepts/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -257,6 +286,138 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-stacking-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Stacking Engine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Stacking Engine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#categories-and-hierarchies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Categories and Hierarchies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#masks-and-scale-factors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Masks and Scale Factors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optimized-fused-kernels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optimized Fused Kernels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-acesesmf-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The ACES/ESMF Lifecycle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The ACES&#x2f;ESMF Lifecycle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-initialize-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Initialize Phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-run-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Run Phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-finalize-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Finalize Phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-portability-with-kokkos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Portability with Kokkos
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -427,37 +588,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    API Reference
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
         
   
   
@@ -473,60 +607,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#core-classes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Core Classes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-structures" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration Structures
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#data-structures" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Data Structures
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -559,32 +639,110 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#core-classes" class="md-nav__link">
+  <a href="#the-stacking-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Core Classes
+        The Stacking Engine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Stacking Engine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#categories-and-hierarchies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Categories and Hierarchies
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-structures" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#masks-and-scale-factors" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration Structures
+        Masks and Scale Factors
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#data-structures" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#optimized-fused-kernels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Data Structures
+        Optimized Fused Kernels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-acesesmf-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The ACES/ESMF Lifecycle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The ACES&#x2f;ESMF Lifecycle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-initialize-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Initialize Phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-run-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Run Phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-finalize-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Finalize Phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-portability-with-kokkos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Portability with Kokkos
       
     </span>
   </a>
@@ -614,27 +772,60 @@
                 
                   
 
-<h1 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h1>
-<p>The following sections provide detailed documentation for the ACES C++ API, generated from the source code.</p>
-<h2 id="core-classes">Core Classes<a class="headerlink" href="#core-classes" title="Permanent link">&para;</a></h2>
-<p>::: doxy.aces.Class
-    name: aces::PhysicsScheme</p>
-<p>::: doxy.aces.Class
-    name: aces::AcesDiagnosticManager</p>
-<p>::: doxy.aces.Class
-    name: aces::PhysicsFactory</p>
-<h2 id="configuration-structures">Configuration Structures<a class="headerlink" href="#configuration-structures" title="Permanent link">&para;</a></h2>
-<p>::: doxy.aces.Class
-    name: aces::AcesConfig</p>
-<p>::: doxy.aces.Class
-    name: aces::PhysicsSchemeConfig</p>
-<p>::: doxy.aces.Class
-    name: aces::EmissionLayer</p>
-<h2 id="data-structures">Data Structures<a class="headerlink" href="#data-structures" title="Permanent link">&para;</a></h2>
-<p>::: doxy.aces.Class
-    name: aces::AcesImportState</p>
-<p>::: doxy.aces.Class
-    name: aces::AcesExportState</p>
+<h1 id="core-concepts">Core Concepts<a class="headerlink" href="#core-concepts" title="Permanent link">&para;</a></h1>
+<p>This page explains the fundamental concepts and architecture of ACES.</p>
+<h2 id="the-stacking-engine">The Stacking Engine<a class="headerlink" href="#the-stacking-engine" title="Permanent link">&para;</a></h2>
+<p>The heart of ACES is the <strong>Stacking Engine</strong>, which calculates final emission fields by combining multiple data layers. It is designed to mimic the priority-based logic of the HEMCO (Harmonized Emissions Component).</p>
+<h3 id="categories-and-hierarchies">Categories and Hierarchies<a class="headerlink" href="#categories-and-hierarchies" title="Permanent link">&para;</a></h3>
+<p>Layers are organized into <strong>Categories</strong> (e.g., <code>anthropogenic</code>, <code>biomass_burning</code>). Within each category, layers are assigned a <strong>Hierarchy</strong> level.</p>
+<ul>
+<li><strong>Priority</strong>: When multiple layers provide data for the same species and location, the layer with the <strong>highest hierarchy</strong> takes precedence.</li>
+<li><strong>Operations</strong>:<ul>
+<li><code>add</code>: The layer's emissions are added to the accumulated sum for that species.</li>
+<li><code>replace</code>: The layer's emissions overwrite the accumulated sum for that species. This is typically used for regional overrides (e.g., a regional inventory replacing a global one).</li>
+</ul>
+</li>
+</ul>
+<h3 id="masks-and-scale-factors">Masks and Scale Factors<a class="headerlink" href="#masks-and-scale-factors" title="Permanent link">&para;</a></h3>
+<p>Each layer can be modified by:
+-   <strong>Geographical Masks</strong>: 2D or 3D fields that restrict where a layer's emissions are applied.
+-   <strong>Scale Factors</strong>: Multipliers applied to the base emission field. These can be static values or dynamic fields (like temperature or wind speed) pulled from ESMF or CDEPS.</p>
+<h3 id="optimized-fused-kernels">Optimized Fused Kernels<a class="headerlink" href="#optimized-fused-kernels" title="Permanent link">&para;</a></h3>
+<p>To ensure high performance on GPUs and CPUs, ACES uses <strong>Kernel Fusion</strong>. Instead of processing each layer and operation in separate steps, the Stacking Engine analyzes the hierarchy and generates a single, fused Kokkos kernel for each species. This significantly reduces memory bandwidth and kernel launch overhead.</p>
+<hr />
+<h2 id="the-acesesmf-lifecycle">The ACES/ESMF Lifecycle<a class="headerlink" href="#the-acesesmf-lifecycle" title="Permanent link">&para;</a></h2>
+<p>ACES is implemented as a NUOPC-compliant ESMF component. It follows a standard lifecycle:</p>
+<h3 id="1-initialize-phase">1. Initialize Phase<a class="headerlink" href="#1-initialize-phase" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Configuration Parsing</strong>: Reads the YAML configuration and validates the stacking plan.</li>
+<li><strong>Physics Instantiation</strong>: Schemes listed in <code>physics_schemes</code> are created and their <code>Initialize</code> methods are called.</li>
+<li><strong>Field Advertising</strong>: ACES "advertises" the fields it expects to import (e.g., meteorology) and the fields it will export (calculated emissions) to the ESMF framework.</li>
+</ul>
+<h3 id="2-run-phase">2. Run Phase<a class="headerlink" href="#2-run-phase" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Dimension Discovery</strong>: ACES dynamically determines the grid dimensions from the ESMF fields at runtime.</li>
+<li><strong>Data Ingestion</strong>:<ul>
+<li>Live meteorological data is pulled from the ESMF Import State.</li>
+<li>Static emission inventories are read from disk using the CDEPS-inline engine.</li>
+</ul>
+</li>
+<li><strong>Stacking Execution</strong>: The fused Kokkos kernels are launched to compute the base emissions.</li>
+<li><strong>Physics Execution</strong>: Active physics schemes (like Sea Salt or MEGAN) are executed to modify or generate new emissions.</li>
+<li><strong>Diagnostics</strong>: Intermediate variables are captured by the <code>AcesDiagnosticManager</code> and written to NetCDF files if configured.</li>
+<li><strong>State Synchronization</strong>: Final emissions are deep-copied back to the ESMF Export State.</li>
+</ul>
+<h3 id="3-finalize-phase">3. Finalize Phase<a class="headerlink" href="#3-finalize-phase" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Resources are released, and Kokkos/CDEPS are finalized.</li>
+</ul>
+<hr />
+<h2 id="performance-portability-with-kokkos">Performance Portability with Kokkos<a class="headerlink" href="#performance-portability-with-kokkos" title="Permanent link">&para;</a></h2>
+<p>ACES uses the <strong>Kokkos</strong> programming model to achieve performance portability. By writing algorithms using Kokkos <code>parallel_for</code> and <code>View</code> abstractions, the same C++ code can be compiled to run on:
+-   <strong>NVIDIA GPUs</strong> (via CUDA)
+-   <strong>AMD GPUs</strong> (via HIP)
+-   <strong>Multi-core CPUs</strong> (via OpenMP or C++ Threads)
+-   <strong>ARM/x86 vector units</strong> (via SIMD abstractions)</p>
+<p>This ensures that ACES remains efficient on present and future high-performance computing architectures without requiring separate codebases for different hardware.</p>
 
 
 
@@ -672,7 +863,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../migration_examples/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Migration Examples">
+          <a href="./.." class="md-footer__link md-footer__link--prev" aria-label="Previous: Introduction">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -682,11 +873,27 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Migration Examples
+                Introduction
               </div>
             </div>
           </a>
         
+        
+          
+          <a href="../users-guide/" class="md-footer__link md-footer__link--next" aria-label="Next: User&#x27;s Guide">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                User's Guide
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
         
       </nav>
     
