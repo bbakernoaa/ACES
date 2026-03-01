@@ -125,9 +125,7 @@ void StackingEngine::UpdateTemporalScales(CompiledSpecies& spec, int hour, int d
     Kokkos::deep_copy(spec.device_layers, spec.host_layers);
 }
 
-/**
- * @brief Resets all field bindings, forcing re-resolution on the next Execute.
- */
+// cppcheck-suppress unusedFunction
 void StackingEngine::ResetBindings() {
     for (auto& spec : m_compiled) {
         spec.fields_bound = false;

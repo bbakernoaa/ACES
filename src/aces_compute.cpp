@@ -25,12 +25,17 @@ namespace aces {
  * @param hour Current hour.
  * @param day_of_week Current day of week.
  */
+// cppcheck-suppress unusedFunction
 void ComputeEmissions(
     const AcesConfig& config, FieldResolver& resolver, int nx, int ny, int nz,
     Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> default_mask,
-    int hour, int day_of_week) {
-    StackingEngine engine(config);
-    engine.Execute(resolver, nx, ny, nz, default_mask, hour, day_of_week);
+    int hour, int day_of_week, StackingEngine* engine) {
+    if (engine) {
+        engine->Execute(resolver, nx, ny, nz, default_mask, hour, day_of_week);
+    } else {
+        StackingEngine stack_engine(config);
+        stack_engine.Execute(resolver, nx, ny, nz, default_mask, hour, day_of_week);
+    }
 }
 
 }  // namespace aces

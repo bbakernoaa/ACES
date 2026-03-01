@@ -163,6 +163,7 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
         }
         data->diagnostic_manager = std::make_unique<AcesDiagnosticManager>();
         data->stacking_engine = std::make_unique<StackingEngine>(data->config);
+        data->stacking_engine->ResetBindings();
 
         // Instantiate requested physics schemes
         for (const auto& scheme_config : data->config.physics_schemes) {
@@ -397,7 +398,8 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     Kokkos::Profiling::pushRegion("ACES_StackingEngine");
     AcesStateResolver resolver(data->import_state, data->export_state, data->config.met_mapping,
                                data->config.scale_factor_mapping, data->config.mask_mapping);
-    data->stacking_engine->Execute(resolver, nx, ny, nz, data->default_mask, hour, day_of_week);
+    ComputeEmissions(data->config, resolver, nx, ny, nz, data->default_mask, hour, day_of_week,
+                     data->stacking_engine.get());
     Kokkos::Profiling::popRegion();
 
     auto& imp = data->import_state;
