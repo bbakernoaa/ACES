@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
     ESMC_Time startTime, stopTime;
     rc = ESMC_TimeSet(&startTime, 2024, 1, cal, ESMC_CALKIND_GREGORIAN, 0);
     CHECK_RC(rc, "ESMC_TimeSet (startTime) failed");
-    rc = ESMC_TimeSet(&stopTime, 2024, 12, cal, ESMC_CALKIND_GREGORIAN, 0);
+    rc = ESMC_TimeSet(&stopTime, 2024, 2, cal, ESMC_CALKIND_GREGORIAN, 0);
     CHECK_RC(rc, "ESMC_TimeSet (stopTime) failed");
 
     ESMC_TimeInterval timeStep;
@@ -81,9 +81,10 @@ int main(int argc, char** argv) {
     ESMC_State exportState = ESMC_StateCreate("ExportState", &rc);
     CHECK_RC(rc, "ESMC_StateCreate (export) failed");
 
-    // Add a field to export state so ACES can discover dimensions
+    // Add a field to export state so ACES can discover dimensions.
+    // We use "total_co_emissions" to match example configuration ex1.
     ESMC_Field f_total = ESMC_FieldCreateGridTypeKind(
-        grid, ESMC_TYPEKIND_R8, ESMC_STAGGERLOC_CENTER, NULL, NULL, NULL, "total_nox_emissions", &rc);
+        grid, ESMC_TYPEKIND_R8, ESMC_STAGGERLOC_CENTER, NULL, NULL, NULL, "total_co_emissions", &rc);
     CHECK_RC(rc, "ESMC_FieldCreate (export) failed");
     rc = ESMC_StateAddField(exportState, f_total);
     CHECK_RC(rc, "ESMC_StateAddField (export) failed");
