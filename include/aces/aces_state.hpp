@@ -18,7 +18,8 @@ namespace aces {
  * @brief Structure containing all meteorology and base emissions imported from
  * other components.
  *
- * Uses an unordered_map to allow flexible addition of fields without hardcoding.
+ * Uses an unordered_map to allow flexible addition of fields without
+ * hardcoding.
  */
 struct AcesImportState {
     /// Map of field names to their respective DualViews.

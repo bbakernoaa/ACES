@@ -23,8 +23,8 @@ static PhysicsRegistration<NativePhysicsExample> register_scheme("native_example
 void NativePhysicsExample::Initialize(const YAML::Node& config,
                                       AcesDiagnosticManager* diag_manager) {
     BasePhysicsScheme::Initialize(config, diag_manager);
-    std::cout << "NativePhysicsExample: Initialized." << "\n";
-    if (diag_manager) {
+    std::cout << "NativePhysicsExample: Initialized.\n";
+    if (diag_manager != nullptr) {
         // Register an example diagnostic variable
         diag_manager->RegisterDiagnostic("native_example_diag", 1, 1, 1);
     }

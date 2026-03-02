@@ -70,7 +70,7 @@ class BasePhysicsScheme : public PhysicsScheme {
     /**
      * @brief Maps an internal input name to an external field name.
      */
-    std::string MapInput(const std::string& name) const {
+    [[nodiscard]] std::string MapInput(const std::string& name) const {
         auto it = input_mapping_.find(name);
         return (it != input_mapping_.end()) ? it->second : name;
     }
@@ -78,7 +78,7 @@ class BasePhysicsScheme : public PhysicsScheme {
     /**
      * @brief Maps an internal output name to an external field name.
      */
-    std::string MapOutput(const std::string& name) const {
+    [[nodiscard]] std::string MapOutput(const std::string& name) const {
         auto it = output_mapping_.find(name);
         return (it != output_mapping_.end()) ? it->second : name;
     }
