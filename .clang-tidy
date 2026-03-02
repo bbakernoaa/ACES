@@ -1,0 +1,20 @@
+---
+# ACES Clang-Tidy Configuration
+Checks: >
+  bugprone-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  google-*,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-else-after-return,
+  -modernize-use-auto,
+  -bugprone-easily-swappable-parameters,
+  -google-readability-todo,
+  -google-runtime-int
+
+HeaderFilterRegex: 'include/aces/.*'
+FormatStyle: google
+...

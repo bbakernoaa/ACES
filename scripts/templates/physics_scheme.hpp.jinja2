@@ -1,0 +1,23 @@
+#ifndef ACES_{{ class_name.upper() }}_HPP
+#define ACES_{{ class_name.upper() }}_HPP
+
+#include "aces/physics_scheme.hpp"
+
+namespace aces {
+
+/**
+ * @class {{ class_name }}
+ * @brief {{ description }}
+ */
+class {{ class_name }} : public BasePhysicsScheme {
+   public:
+    {{ class_name }}() = default;
+    ~{{ class_name }}() override = default;
+
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
+    void Run(AcesImportState& import_state, AcesExportState& export_state) override;
+};
+
+}  // namespace aces
+
+#endif  // ACES_{{ class_name.upper() }}_HPP

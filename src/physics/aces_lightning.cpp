@@ -52,11 +52,11 @@ void LightningScheme::Run(AcesImportState& import_state, AcesExportState& export
     const double MW_NO = 30.0;
 
     Kokkos::parallel_for(
-        "LightningKernel_Faithful",
-        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0},
-                                                                              {nx, ny, nz}),
-        KOKKOS_LAMBDA(int i, int j, int k) {
-            double h = conv_depth(i, j, k);
+        "LightningKernel_Optimized",
+        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<2>>({0, 0}, {nx, ny}),
+        KOKKOS_LAMBDA(int i, int j) {
+            // Use convective depth from surface or first level as representative for the column
+            double h = conv_depth(i, j, 0);
             if (h <= 0.0) return;
 
             bool is_land = has_land_mask ? (land_mask(i, j, 0) > 0.5) : true;
@@ -64,9 +64,12 @@ void LightningScheme::Run(AcesImportState& import_state, AcesExportState& export
             double flash_rate = 3.44e-5 * std::pow(h_km, 4.9);
 
             double total_yield = get_lightning_yield(flash_rate, MW_NO, is_land);
+            double level_yield = total_yield / nz;
 
-            // Vertically distribute (Ott et al. proxy)
-            light_nox(i, j, k) += total_yield / nz;
+            // Vertically distribute (Ott et al. proxy) - Optimized column fill
+            for (int k = 0; k < nz; ++k) {
+                light_nox(i, j, k) += level_yield;
+            }
         });
 
     Kokkos::fence();

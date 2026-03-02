@@ -21,6 +21,13 @@ using UnmanagedDeviceView3D =
                  Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
 
 /**
+ * @brief Alias for a mutable unmanaged 3D device View.
+ */
+using MutableUnmanagedDeviceView3D =
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace,
+                 Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+
+/**
  * @struct DeviceLayer
  * @brief POD-like structure containing unmanaged device-side View handles.
  *
@@ -65,6 +72,12 @@ class StackingEngine {
         Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> default_mask,
         int hour, int day_of_week);
 
+    /**
+     * @brief Resets the bound field handles.
+     * @details Call this if the underlying ESMF field pointers change.
+     */
+    void ResetBindings();
+
    private:
     struct CompiledLayer {
         std::string field_name;
@@ -79,19 +92,24 @@ class StackingEngine {
 
     struct CompiledSpecies {
         std::string name;
+        std::string export_name;
         std::vector<CompiledLayer> layers;
         /// Device-side storage for layer handles.
         Kokkos::View<DeviceLayer*, Kokkos::DefaultExecutionSpace> device_layers;
         /// Persistent host-side mirror to avoid redundant allocations.
         typename Kokkos::View<DeviceLayer*, Kokkos::DefaultExecutionSpace>::HostMirror host_layers;
+        /// Cached handle to the export View.
+        MutableUnmanagedDeviceView3D export_field;
+        /// Flag to track if field handles are already resolved.
+        bool fields_bound = false;
     };
 
     AcesConfig m_config;
     std::vector<CompiledSpecies> m_compiled;
 
     void PreCompile();
-    void BindSpecies(CompiledSpecies& spec, FieldResolver& resolver, int nx, int ny, int nz,
-                     int hour, int day_of_week);
+    void BindFields(CompiledSpecies& spec, FieldResolver& resolver, int nx, int ny, int nz);
+    void UpdateTemporalScales(CompiledSpecies& spec, int hour, int day_of_week);
 };
 
 }  // namespace aces

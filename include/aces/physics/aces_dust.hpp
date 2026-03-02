@@ -16,6 +16,9 @@ class DustScheme : public BasePhysicsScheme {
 
     void Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) override;
     void Run(AcesImportState& import_state, AcesExportState& export_state) override;
+
+   private:
+    double u_ts0_ = 0.0;
 };
 
 }  // namespace aces

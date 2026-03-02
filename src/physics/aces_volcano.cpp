@@ -36,11 +36,13 @@ void VolcanoScheme::Run(AcesImportState& import_state, AcesExportState& export_s
     const double volcano_cld = 2000.0;
 
     Kokkos::parallel_for(
-        "VolcanoKernel_Faithful",
-        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0},
-                                                                              {nx, ny, nz}),
-        KOKKOS_LAMBDA(int i, int j, int k) {
-            if (i != target_i || j != target_j) return;
+        "VolcanoKernel_Optimized", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, nz),
+        KOKKOS_LAMBDA(int k) {
+            // Refactored to only iterate over the vertical column for the point source.
+            // In a real implementation, target_i/target_j would be mapped from local process
+            // bounds.
+            int i = target_i;
+            int j = target_j;
 
             double z_bot_box = zsfc(i, j, 0);
             for (int l = 0; l < k; ++l) z_bot_box += bxheight(i, j, l);

@@ -58,12 +58,6 @@ Example for targeting NVIDIA GPUs:
 cmake .. -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_AMPERE80=ON
 ```
 
-### Local Development (Mock ESMF)
-
-If you don't have ESMF installed and want to test the C++ logic, you can build with a mock implementation:
-```bash
-cmake .. -DACES_USE_MOCK_ESMF=ON
-```
 
 ## Running the Example
 

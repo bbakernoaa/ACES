@@ -24,6 +24,7 @@ void StackingEngine::PreCompile() {
     for (auto const& [species, layers] : m_config.species_layers) {
         CompiledSpecies spec;
         spec.name = species;
+        spec.export_name = "total_" + species + "_emissions";
         for (auto const& layer : layers) {
             spec.layers.push_back({layer.field_name, layer.operation, layer.scale, layer.hierarchy,
                                    layer.masks, layer.scale_fields, layer.diurnal_cycle,
@@ -45,22 +46,59 @@ void StackingEngine::PreCompile() {
 
 /**
  * @brief Binds external fields to device-side Views and prepares layer metadata.
+ * @details This is only performed when fields_bound is false, minimizing
+ * expensive string-based field resolution.
  * @param spec The species to bind.
  * @param resolver The field resolver.
  * @param nx X dimension.
  * @param ny Y dimension.
  * @param nz Z dimension.
- * @param hour Current hour.
- * @param day_of_week Current day of week.
  */
-void StackingEngine::BindSpecies(CompiledSpecies& spec, FieldResolver& resolver, int nx, int ny,
-                                 int nz, int hour, int day_of_week) {
+void StackingEngine::BindFields(CompiledSpecies& spec, FieldResolver& resolver, int nx, int ny,
+                                int nz) {
+    if (spec.fields_bound) return;
+
+    spec.export_field = resolver.ResolveExportDevice(spec.export_name, nx, ny, nz);
+
     for (size_t i = 0; i < spec.layers.size(); ++i) {
         const auto& layer = spec.layers[i];
-        DeviceLayer dev;
+        DeviceLayer& dev = spec.host_layers(i);
 
         dev.field = resolver.ResolveImportDevice(layer.field_name, nx, ny, nz);
         dev.replace_flag = (layer.operation == "replace") ? 1.0 : 0.0;
+
+        dev.num_scales = 0;
+        for (const auto& sf_name : layer.scale_fields) {
+            if (dev.num_scales >= DeviceLayer::MAX_SCALES) break;
+            auto sf_view = resolver.ResolveImportDevice(sf_name, nx, ny, nz);
+            if (sf_view.data() != nullptr) {
+                dev.scales[dev.num_scales++] = sf_view;
+            }
+        }
+
+        dev.num_masks = 0;
+        for (const auto& m_name : layer.masks) {
+            if (dev.num_masks >= DeviceLayer::MAX_MASKS) break;
+            auto m_view = resolver.ResolveImportDevice(m_name, nx, ny, nz);
+            if (m_view.data() != nullptr) {
+                dev.masks[dev.num_masks++] = m_view;
+            }
+        }
+    }
+    spec.fields_bound = true;
+}
+
+/**
+ * @brief Updates the temporal scaling factors for the currently bound layers.
+ * @details Performs a deep_copy of the metadata to the device after updating.
+ * @param spec The species to update.
+ * @param hour Current hour.
+ * @param day_of_week Current day of week.
+ */
+void StackingEngine::UpdateTemporalScales(CompiledSpecies& spec, int hour, int day_of_week) {
+    for (size_t i = 0; i < spec.layers.size(); ++i) {
+        const auto& layer = spec.layers[i];
+        DeviceLayer& dev = spec.host_layers(i);
 
         double scale = layer.base_scale;
         if (!layer.diurnal_cycle.empty()) {
@@ -86,29 +124,14 @@ void StackingEngine::BindSpecies(CompiledSpecies& spec, FieldResolver& resolver,
             }
         }
         dev.scale = scale;
-
-        dev.num_scales = 0;
-        for (const auto& sf_name : layer.scale_fields) {
-            if (dev.num_scales >= DeviceLayer::MAX_SCALES) break;
-            auto sf_view = resolver.ResolveImportDevice(sf_name, nx, ny, nz);
-            if (sf_view.data() != nullptr) {
-                dev.scales[dev.num_scales++] = sf_view;
-            }
-        }
-
-        dev.num_masks = 0;
-        for (const auto& m_name : layer.masks) {
-            if (dev.num_masks >= DeviceLayer::MAX_MASKS) break;
-            auto m_view = resolver.ResolveImportDevice(m_name, nx, ny, nz);
-            if (m_view.data() != nullptr) {
-                dev.masks[dev.num_masks++] = m_view;
-            }
-        }
-
-        spec.host_layers(i) = dev;
     }
-
     Kokkos::deep_copy(spec.device_layers, spec.host_layers);
+}
+
+void StackingEngine::ResetBindings() {
+    for (auto& spec : m_compiled) {
+        spec.fields_bound = false;
+    }
 }
 
 /**
@@ -136,15 +159,19 @@ void StackingEngine::Execute(
     }
 
     for (auto& spec : m_compiled) {
-        std::string export_name = "total_" + spec.name + "_emissions";
-        auto total_view = resolver.ResolveExportDevice(export_name, nx, ny, nz);
-
-        if (total_view.data() == nullptr || spec.layers.empty()) {
+        if (spec.layers.empty()) {
             continue;
         }
 
-        BindSpecies(spec, resolver, nx, ny, nz, hour, day_of_week);
+        BindFields(spec, resolver, nx, ny, nz);
 
+        if (spec.export_field.data() == nullptr) {
+            continue;
+        }
+
+        UpdateTemporalScales(spec, hour, day_of_week);
+
+        auto total_view = spec.export_field;
         Kokkos::deep_copy(total_view, 0.0);
 
         auto layers = spec.device_layers;

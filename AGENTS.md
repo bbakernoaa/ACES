@@ -1,18 +1,22 @@
 # ACES Developer Guide
 
 ## Project Overview
-ACES (Accelerated Component for Emission System) is a C++17 emissions compute component designed for high performance using Kokkos and ESMF.
+ACES (Accelerated Component for Emission System) is a C++20 emissions compute component designed for high performance using Kokkos and ESMF.
 
 ## Global Coding Standards
-*   **Language:** C++17.
+*   **Language:** C++20.
 *   **Style:** Google C++ Style Guide.
 *   **Namespace:** `aces::` (defined in `include/aces/aces.hpp`).
 *   **Documentation:** Doxygen format (`/** ... */`) required for all public APIs.
 *   **Memory:** Use `Kokkos::View` for data. Avoid raw pointers.
 *   **ESMF:** Use `ESMC_` C API. Wrap data in `Kokkos::View` with `Kokkos::MemoryTraits<Kokkos::Unmanaged>`.
+*   **Performance Portability:** All compute kernels MUST use Kokkos parallel primitives and avoid hardware-specific code.
 
 ## Development Environment
-The recommended development environment is the `jcsda/docker-gnu-openmpi-dev:1.9` Docker container. This container provides pre-installed compilers, MPI, and ESMF.
+The required development environment is the `jcsda/docker-gnu-openmpi-dev:1.9` Docker container. This container provides the necessary compilers, MPI, and ESMF dependencies.
+
+### ⚠️ IMPORTANT: No Mocking Policy
+**Mocking ESMF or NUOPC is strictly forbidden.** All development and verification must be performed using real ESMF dependencies within the JCSDA Docker environment to ensure real-world parity and stability.
 
 ### Quick Start
 1.  **Run the Setup Script:**
@@ -29,7 +33,7 @@ The recommended development environment is the `jcsda/docker-gnu-openmpi-dev:1.9
     Inside the container:
     ```bash
     mkdir build && cd build
-    cmake .. -DACES_USE_MOCK_ESMF=OFF
+    cmake ..
     make -j4
     ```
 
@@ -39,15 +43,13 @@ The recommended development environment is the `jcsda/docker-gnu-openmpi-dev:1.9
     ./example_driver
     ```
 
-3.  **Test:**
+4.  **Test:**
     ```bash
     ctest --output-on-failure
     ```
 
-## Local Development (Without Docker)
-If you cannot use Docker, the project can build using a Mock ESMF implementation.
+### Python Dependencies
+The physics scheme generator and other scripts require `jinja2`, `pyyaml`, and `pytest`.
 ```bash
-cmake -S . -B build -DACES_USE_MOCK_ESMF=ON
-cmake --build build
-ctest --test-dir build
+python3 -m pip install jinja2 pyyaml pytest
 ```

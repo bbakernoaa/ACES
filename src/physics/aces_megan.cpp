@@ -66,9 +66,11 @@ double get_gamma_co2(double co2a) {
     return 8.9406 / (1.0 + 8.9406 * 0.0024 * co2a);
 }
 
-void MeganScheme::Initialize(const YAML::Node& /*config*/,
-                             AcesDiagnosticManager* /*diag_manager*/) {
-    std::cout << "MeganScheme: Initialized." << std::endl;
+void MeganScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* /*diag_manager*/) {
+    double co2a = 400.0;
+    if (config["co2_concentration"]) co2a = config["co2_concentration"].as<double>();
+    gamma_co2_ = get_gamma_co2(co2a);
+    std::cout << "MeganScheme: Initialized. GAMMA_CO2=" << gamma_co2_ << std::endl;
 }
 
 void MeganScheme::Run(AcesImportState& import_state, AcesExportState& export_state) {
@@ -93,18 +95,15 @@ void MeganScheme::Run(AcesImportState& import_state, AcesExportState& export_sta
     const double LDF = 1.0;
     const double NORM_FAC = 1.0 / 1.0101081;
     const double AEF_ISOP = 1.0e-9;
-    const double CO2A = 400.0;  // Default atmospheric CO2
+    double gamma_co2_const = gamma_co2_;
 
     Kokkos::parallel_for(
-        "MeganKernel_Faithful",
-        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0},
-                                                                              {nx, ny, nz}),
-        KOKKOS_LAMBDA(int i, int j, int k) {
-            if (k != 0) return;  // Surface restricted
-
-            double T = temp(i, j, k);
-            double L = lai(i, j, k);
-            double sc = suncos(i, j, k);
+        "MeganKernel_Optimized",
+        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<2>>({0, 0}, {nx, ny}),
+        KOKKOS_LAMBDA(int i, int j) {
+            double T = temp(i, j, 0);
+            double L = lai(i, j, 0);
+            double sc = suncos(i, j, 0);
 
             if (L <= 0.0) return;
 
@@ -116,13 +115,12 @@ void MeganScheme::Run(AcesImportState& import_state, AcesExportState& export_sta
             double gamma_t_li = get_gamma_t_li(T, BETA);
             double gamma_t_ld = get_gamma_t_ld(T, T_AVG_15, CT1, CEO);
             double gamma_par =
-                get_gamma_par_pceea(pardr(i, j, k), pardf(i, j, k), PAR_AVG, sc, doy);
-            double gamma_co2 = get_gamma_co2(CO2A);
+                get_gamma_par_pceea(pardr(i, j, 0), pardf(i, j, 0), PAR_AVG, sc, doy);
 
-            double megan_emis = NORM_FAC * AEF_ISOP * gamma_lai * gamma_co2 *
+            double megan_emis = NORM_FAC * AEF_ISOP * gamma_lai * gamma_co2_const *
                                 ((1.0 - LDF) * gamma_t_li + (LDF * gamma_par * gamma_t_ld));
 
-            isoprene(i, j, k) += megan_emis;
+            isoprene(i, j, 0) += megan_emis;
         });
 
     Kokkos::fence();

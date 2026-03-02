@@ -1,8 +1,8 @@
 #ifndef ACES_DIAGNOSTICS_HPP
 #define ACES_DIAGNOSTICS_HPP
 
-#include <map>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "ESMC.h"
@@ -39,7 +39,10 @@ class AcesDiagnosticManager {
                           ESMC_Field template_field);
 
    private:
-    std::map<std::string, DualView3D> diagnostics_;
+    std::unordered_map<std::string, DualView3D> diagnostics_;
+    ESMC_Grid cached_grid_{nullptr};
+    ESMC_Mesh cached_mesh_{nullptr};
+    std::string cached_mesh_file_;
 };
 
 }  // namespace aces

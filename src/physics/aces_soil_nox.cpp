@@ -49,12 +49,11 @@ void SoilNoxScheme::Run(AcesImportState& import_state, AcesExportState& export_s
     const double A_BIOME_WET = 0.5;                  // Example wet biome coefficient
 
     Kokkos::parallel_for(
-        "SoilNoxKernel_Full",
-        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0},
-                                                                              {nx, ny, nz}),
-        KOKKOS_LAMBDA(int i, int j, int k) {
-            double tc = temp(i, j, k) - 273.15;
-            double gw = gwet(i, j, k);
+        "SoilNoxKernel_Optimized",
+        Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<2>>({0, 0}, {nx, ny}),
+        KOKKOS_LAMBDA(int i, int j) {
+            double tc = temp(i, j, 0) - 273.15;
+            double gw = gwet(i, j, 0);
 
             double t_term = soil_temp_term(tc);
             double w_term = soil_wet_term(gw);
@@ -62,12 +61,9 @@ void SoilNoxScheme::Run(AcesImportState& import_state, AcesExportState& export_s
             // Pulse factor placeholder (HEMCO uses complex stateful pulsing logic)
             double pulse = 1.0;
 
-            // Surface source
-            if (k == 0) {
-                // Total emission [kg NO/m2/s]
-                double emiss = A_BIOME_WET * UNITCONV * t_term * w_term * pulse;
-                soil_nox(i, j, k) += emiss;
-            }
+            // Total emission [kg NO/m2/s]
+            double emiss = A_BIOME_WET * UNITCONV * t_term * w_term * pulse;
+            soil_nox(i, j, 0) += emiss;
         });
 
     Kokkos::fence();
