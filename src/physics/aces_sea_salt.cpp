@@ -69,11 +69,13 @@ void SeaSaltScheme::Run(AcesImportState& import_state, AcesExportState& export_s
     auto sala = ResolveExport("total_SALA_emissions", export_state);
     auto salc = ResolveExport("total_SALC_emissions", export_state);
 
-    if (u10m.data() == nullptr || tskin.data() == nullptr) return;
+    if (u10m.data() == nullptr || tskin.data() == nullptr) {
+        return;
+    }
 
-    int nx = u10m.extent(0);
-    int ny = u10m.extent(1);
-    int nz = u10m.extent(2);
+    int nx = static_cast<int>(u10m.extent(0));
+    int ny = static_cast<int>(u10m.extent(1));
+    int nz = static_cast<int>(u10m.extent(2));
 
     double ref_sala = srrc_SALA_;
     double ref_salc = srrc_SALC_;

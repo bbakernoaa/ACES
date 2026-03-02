@@ -24,8 +24,9 @@ void LightningFortranScheme::Run(AcesImportState& import_state, AcesExportState&
     auto it_conv_depth = import_state.fields.find("convective_cloud_top_height");
     auto it_light_emis = export_state.fields.find("total_lightning_nox_emissions");
 
-    if (it_conv_depth == import_state.fields.end() || it_light_emis == export_state.fields.end())
+    if (it_conv_depth == import_state.fields.end() || it_light_emis == export_state.fields.end()) {
         return;
+    }
 
     auto& dv_conv_depth = it_conv_depth->second;
     auto& dv_light_emis = it_light_emis->second;

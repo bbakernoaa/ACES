@@ -49,9 +49,9 @@ void DustScheme::Run(AcesImportState& import_state, AcesExportState& export_stat
         dust_emis.data() == nullptr)
         return;
 
-    int nx = dust_emis.extent(0);
-    int ny = dust_emis.extent(1);
-    int nz = dust_emis.extent(2);
+    int nx = static_cast<int>(dust_emis.extent(0));
+    int ny = static_cast<int>(dust_emis.extent(1));
+    int nz = static_cast<int>(dust_emis.extent(2));
 
     const double CH_DUST = 9.375e-10;  // Default tuning factor
     double u_ts0_const = u_ts0_;

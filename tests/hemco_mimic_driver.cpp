@@ -23,7 +23,7 @@ void ACES_Finalize(ESMC_GridComp comp, ESMC_State importState, ESMC_State export
 int main(int argc, char** argv) {
     int rc;
 
-    ESMC_Initialize(NULL, ESMC_ArgLast);
+    ESMC_Initialize(nullptr, ESMC_ArgLast);
     std::cout << "[Driver] ESMF Initialized." << "\n";
 
     const int nx = 72;
@@ -34,13 +34,13 @@ int main(int argc, char** argv) {
     ESMC_InterArrayInt iMaxIndex;
     ESMC_InterArrayIntSet(&iMaxIndex, maxIndex3D, 3);
 
-    ESMC_Grid grid = ESMC_GridCreateNoPeriDim(&iMaxIndex, NULL, NULL, NULL, &rc);
+    ESMC_Grid grid = ESMC_GridCreateNoPeriDim(&iMaxIndex, nullptr, nullptr, nullptr, &rc);
     ESMC_State importState = ESMC_StateCreate("ImportState", &rc);
     ESMC_State exportState = ESMC_StateCreate("ExportState", &rc);
 
     auto createField = [&](ESMC_State state, const char* name) {
         ESMC_Field field = ESMC_FieldCreateGridTypeKind(
-            grid, ESMC_TYPEKIND_R8, ESMC_STAGGERLOC_CENTER, NULL, NULL, NULL, name, &rc);
+            grid, ESMC_TYPEKIND_R8, ESMC_STAGGERLOC_CENTER, nullptr, nullptr, nullptr, name, &rc);
         ESMC_StateAddField(state, field);
         return field;
     };
@@ -51,9 +51,9 @@ int main(int argc, char** argv) {
     ESMC_Field f_total = createField(exportState, "total_nox_emissions");
 
     // Provide data
-    double* base_ptr = (double*)ESMC_FieldGetPtr(f_base, 0, &rc);
-    double* euro_ptr = (double*)ESMC_FieldGetPtr(f_euro, 0, &rc);
-    double* mask_ptr = (double*)ESMC_FieldGetPtr(f_mask, 0, &rc);
+    double* base_ptr = static_cast<double*>(ESMC_FieldGetPtr(f_base, 0, &rc));
+    double* euro_ptr = static_cast<double*>(ESMC_FieldGetPtr(f_euro, 0, &rc));
+    double* mask_ptr = static_cast<double*>(ESMC_FieldGetPtr(f_mask, 0, &rc));
     for (int i = 0; i < nx * ny * nz; ++i) {
         base_ptr[i] = 100.0;
         euro_ptr[i] = 120.0;
@@ -62,7 +62,8 @@ int main(int argc, char** argv) {
         mask_ptr[i] = (x > nx / 2) ? 1.0 : 0.0;
     }
 
-    ESMC_Time startTime, stopTime;
+    ESMC_Time startTime;
+    ESMC_Time stopTime;
     ESMC_Calendar cal = ESMC_CalendarCreate("Gregorian", ESMC_CALKIND_GREGORIAN, &rc);
     ESMC_TimeSet(&startTime, 2024, 1, cal, ESMC_CALKIND_GREGORIAN, 0);
     ESMC_TimeSet(&stopTime, 2024, 1, cal, ESMC_CALKIND_GREGORIAN, 2);
@@ -71,7 +72,7 @@ int main(int argc, char** argv) {
     ESMC_Clock clock = ESMC_ClockCreate("SimulationClock", timeStep, startTime, stopTime, &rc);
 
     // In ESMF 8.8.0 C API, ESMC_GridCompCreate has 4 arguments
-    ESMC_GridComp acesComp = ESMC_GridCompCreate("ACES", NULL, clock, &rc);
+    ESMC_GridComp acesComp = ESMC_GridCompCreate("ACES", nullptr, clock, &rc);
 
     // Use the new config file
     std::system("cp ../hemco_mimic_config.yaml aces_config.yaml");
@@ -83,7 +84,7 @@ int main(int argc, char** argv) {
     ACES_Run(acesComp, importState, exportState, &clock, &rc);
 
     // Verification
-    double* total_ptr = (double*)ESMC_FieldGetPtr(f_total, 0, &rc);
+    double* total_ptr = static_cast<double*>(ESMC_FieldGetPtr(f_total, 0, &rc));
     bool success = true;
     for (int i = 0; i < nx * ny * nz; ++i) {
         int x = i % nx;

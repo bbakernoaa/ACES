@@ -86,9 +86,9 @@ void MeganScheme::Run(AcesImportState& import_state, AcesExportState& export_sta
         pardr.data() == nullptr || pardf.data() == nullptr || suncos.data() == nullptr)
         return;
 
-    int nx = isoprene.extent(0);
-    int ny = isoprene.extent(1);
-    int nz = isoprene.extent(2);
+    int nx = static_cast<int>(isoprene.extent(0));
+    int ny = static_cast<int>(isoprene.extent(1));
+    int nz = static_cast<int>(isoprene.extent(2));
 
     const double BETA = 0.13;
     const double CT1 = 95.0;
@@ -106,7 +106,9 @@ void MeganScheme::Run(AcesImportState& import_state, AcesExportState& export_sta
             double L = lai(i, j, 0);
             double sc = suncos(i, j, 0);
 
-            if (L <= 0.0) return;
+            if (L <= 0.0) {
+                return;
+            }
 
             double T_AVG_15 = 297.0;
             double PAR_AVG = 400.0;
