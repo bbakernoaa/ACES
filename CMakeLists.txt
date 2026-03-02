@@ -47,8 +47,6 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-option(ACES_USE_MOCK_ESMF "Use mock ESMF implementation for testing" OFF)
-
 # Optional Fortran support
 include(CheckLanguage)
 check_language(Fortran)
@@ -59,21 +57,9 @@ else()
   message(WARNING "Fortran compiler not found. Fortran features will be disabled.")
 endif()
 
-if(ACES_USE_MOCK_ESMF)
-  add_library(mock_esmf STATIC src/mock_esmf.cpp)
-  add_library(ESMF::ESMF ALIAS mock_esmf)
-  target_compile_definitions(mock_esmf INTERFACE ACES_USE_MOCK_ESMF)
-  target_include_directories(mock_esmf PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mock_esmf)
-  set(ESMF_FOUND TRUE)
-  # Mock CDEPS if needed or skip parts that require it
-  set(CDEPS_FOUND TRUE)
-  add_library(CDEPS::CDEPS INTERFACE IMPORTED)
-  # Mock MPI if needed
-  if(NOT TARGET MPI::MPI_CXX)
-    add_library(MPI::MPI_CXX INTERFACE IMPORTED)
-  endif()
-else()
-  find_package(ESMF REQUIRED)
+# ESMF and NUOPC are required dependencies.
+# NOTE: Mocking ESMF/NUOPC is strictly forbidden to ensure real-world parity.
+find_package(ESMF REQUIRED)
 message(STATUS "Found ESMF: ${ESMF_VERSION}")
 message(STATUS "ESMF include dirs: ${ESMF_INCLUDE_DIRS}")
 
@@ -202,7 +188,6 @@ endif()
 # Fallback: if not found and not built from source, it's an error.
 if(NOT CDEPS_FOUND)
   message(FATAL_ERROR "CDEPS is required but was not found on the system or successfully built from source.")
-endif()
 endif()
 
 # --- ACES Library ---

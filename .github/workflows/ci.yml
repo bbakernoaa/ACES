@@ -44,7 +44,7 @@ jobs:
         cd build
 
         # Configure ACES. CMake will detect if it's already configured.
-        cmake .. -DACES_USE_MOCK_ESMF=OFF -DCMAKE_BUILD_TYPE=Release -DKokkos_ENABLE_SERIAL=ON
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DKokkos_ENABLE_SERIAL=ON
 
         # Build. Make will only build what has changed.
         make -j$(nproc)

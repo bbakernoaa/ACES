@@ -4,19 +4,26 @@ on: [pull_request, push]
 jobs:
   format-and-lint:
     runs-on: ubuntu-latest
+    container: jcsda/docker-gnu-openmpi-dev:1.9
     steps:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Install Clang-Format and Cppcheck
+    - name: Install Clang-Format and Clang-Tidy
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-format cppcheck
+        sudo apt-get install -y clang-format clang-tidy
 
     - name: Run Clang-Format Check
       run: |
         find src include tests -name "*.cpp" -o -name "*.hpp" | xargs clang-format --dry-run --Werror
 
-    - name: Run Cppcheck
+    - name: Run Clang-Tidy
       run: |
-        cppcheck --enable=all --suppress=missingIncludeSystem --suppress=missingInclude -I include --error-exitcode=1 src include
+        if [ -f /opt/spack-environment/activate.sh ]; then
+          source /opt/spack-environment/activate.sh
+        fi
+        mkdir -p build && cd build
+        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        cd ..
+        run-clang-tidy -p build -header-filter='include/aces/.*' 'src/.*'

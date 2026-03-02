@@ -7,7 +7,6 @@
 
 namespace aces {
 
-// cppcheck-suppress unusedFunction
 DualView3D AcesDiagnosticManager::RegisterDiagnostic(const std::string& name, int nx, int ny,
                                                      int nz) {
     auto it = diagnostics_.find(name);
