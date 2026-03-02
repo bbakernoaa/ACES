@@ -16,7 +16,8 @@ static PhysicsRegistration<DMSScheme> register_scheme("dms");
  * @brief DMS Sea-Air Flux (Ported from hcox_seaflux_mod.F90)
  */
 
-void DMSScheme::Initialize(const YAML::Node& /*config*/, AcesDiagnosticManager* /*diag_manager*/) {
+void DMSScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) {
+    BasePhysicsScheme::Initialize(config, diag_manager);
     std::cout << "DMSScheme: Initialized." << std::endl;
 }
 

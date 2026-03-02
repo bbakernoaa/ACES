@@ -26,8 +26,8 @@ double get_lightning_yield(double rate, double mw_no, bool is_land) {
     return (rate * yield_molec) * (mw_no / 1000.0) / (AVOGADRO * 1.0e6);
 }
 
-void LightningScheme::Initialize(const YAML::Node& /*config*/,
-                                 AcesDiagnosticManager* /*diag_manager*/) {
+void LightningScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) {
+    BasePhysicsScheme::Initialize(config, diag_manager);
     std::cout << "LightningScheme: Initialized." << std::endl;
 }
 

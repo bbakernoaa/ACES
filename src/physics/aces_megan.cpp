@@ -66,7 +66,8 @@ double get_gamma_co2(double co2a) {
     return 8.9406 / (1.0 + 8.9406 * 0.0024 * co2a);
 }
 
-void MeganScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* /*diag_manager*/) {
+void MeganScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) {
+    BasePhysicsScheme::Initialize(config, diag_manager);
     double co2a = 400.0;
     if (config["co2_concentration"]) co2a = config["co2_concentration"].as<double>();
     gamma_co2_ = get_gamma_co2(co2a);

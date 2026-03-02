@@ -24,7 +24,8 @@ double calculate_u_ts0(double den, double diam, double g, double rhoa) {
     return 129.0e-5 * std::sqrt(alpha) * std::sqrt(beta) / std::sqrt(gamma);
 }
 
-void DustScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* /*diag_manager*/) {
+void DustScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) {
+    BasePhysicsScheme::Initialize(config, diag_manager);
     const double G = 980.665;     // cm/s^2
     const double RHOA = 1.25e-3;  // g/cm3
 

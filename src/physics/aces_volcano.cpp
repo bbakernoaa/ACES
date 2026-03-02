@@ -12,8 +12,8 @@ namespace aces {
 /// Self-registration for the VolcanoScheme scheme.
 static PhysicsRegistration<VolcanoScheme> register_scheme("volcano");
 
-void VolcanoScheme::Initialize(const YAML::Node& /*config*/,
-                               AcesDiagnosticManager* /*diag_manager*/) {
+void VolcanoScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) {
+    BasePhysicsScheme::Initialize(config, diag_manager);
     std::cout << "VolcanoScheme: Initialized." << std::endl;
 }
 

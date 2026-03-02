@@ -20,8 +20,9 @@ static PhysicsRegistration<NativePhysicsExample> register_scheme("native_example
  * @param config YAML node containing scheme-specific options.
  * @param diag_manager Pointer to the diagnostic manager.
  */
-void NativePhysicsExample::Initialize(const YAML::Node& /*config*/,
+void NativePhysicsExample::Initialize(const YAML::Node& config,
                                       AcesDiagnosticManager* diag_manager) {
+    BasePhysicsScheme::Initialize(config, diag_manager);
     std::cout << "NativePhysicsExample: Initialized." << std::endl;
     if (diag_manager) {
         // Register an example diagnostic variable
@@ -40,6 +41,7 @@ void NativePhysicsExample::Initialize(const YAML::Node& /*config*/,
  */
 void NativePhysicsExample::Run(AcesImportState& import_state, AcesExportState& export_state) {
     auto base_nox = ResolveImport("base_anthropogenic_nox", import_state);
+    auto secondary_input = ResolveInput("secondary_input", import_state, export_state);
     auto total_nox = ResolveExport("total_nox_emissions", export_state);
 
     if (!base_nox.data() || !total_nox.data()) return;
@@ -54,8 +56,12 @@ void NativePhysicsExample::Run(AcesImportState& import_state, AcesExportState& e
         Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0},
                                                                               {nx, ny, nz}),
         KOKKOS_LAMBDA(int i, int j, int k) {
+            double multiplier = 2.0;
+            if (secondary_input.data()) {
+                multiplier = secondary_input(i, j, k);
+            }
             // Apply a dummy calculation
-            total_nox(i, j, k) += base_nox(i, j, k) * 2.0;
+            total_nox(i, j, k) += base_nox(i, j, k) * multiplier;
         });
     // Fence to ensure completion before returning control
     Kokkos::fence();

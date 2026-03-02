@@ -230,3 +230,79 @@ TEST_F(PhysicsTest, SoilNoxSensitivity) {
 
     EXPECT_GT(em_opt, em_dry);
 }
+
+TEST_F(PhysicsTest, NativeExampleMultipleInputs) {
+    PhysicsSchemeConfig cfg;
+    cfg.name = "native_example";
+
+    // Test case 1: Default (no secondary input)
+    {
+        auto scheme = PhysicsFactory::CreateScheme(cfg);
+        scheme->Initialize(cfg.options, nullptr);
+
+        SetFieldValue("total_nox_emissions", 0.0, false);
+        SetFieldValue("base_anthropogenic_nox", 1.0);
+
+        scheme->Run(import_state, export_state);
+
+        auto& dv = export_state.fields["total_nox_emissions"];
+        dv.sync<Kokkos::HostSpace>();
+        EXPECT_NEAR(dv.view_host()(0, 0, 0), 2.0, 1e-6); // 1.0 * 2.0 (default multiplier)
+    }
+
+    // Test case 2: Secondary input from Import State with mapping
+    {
+        PhysicsSchemeConfig cfg_mapped = cfg;
+        cfg_mapped.options = YAML::Load("input_mapping: {secondary_input: custom_import}");
+
+        auto scheme = PhysicsFactory::CreateScheme(cfg_mapped);
+        scheme->Initialize(cfg_mapped.options, nullptr);
+
+        import_state.fields["custom_import"] = create_dv("custom_import", 5.0);
+        SetFieldValue("total_nox_emissions", 0.0, false);
+        SetFieldValue("base_anthropogenic_nox", 1.0);
+
+        scheme->Run(import_state, export_state);
+
+        auto& dv = export_state.fields["total_nox_emissions"];
+        dv.sync<Kokkos::HostSpace>();
+        EXPECT_NEAR(dv.view_host()(0, 0, 0), 5.0, 1e-6); // 1.0 * 5.0
+    }
+
+    // Test case 3: Secondary input from Export State (chaining schemes)
+    {
+        PhysicsSchemeConfig cfg_chained = cfg;
+        cfg_chained.options = YAML::Load("input_mapping: {secondary_input: total_SALA_emissions}");
+
+        auto scheme = PhysicsFactory::CreateScheme(cfg_chained);
+        scheme->Initialize(cfg_chained.options, nullptr);
+
+        SetFieldValue("total_SALA_emissions", 10.0, false);
+        SetFieldValue("total_nox_emissions", 0.0, false);
+        SetFieldValue("base_anthropogenic_nox", 1.0);
+
+        scheme->Run(import_state, export_state);
+
+        auto& dv = export_state.fields["total_nox_emissions"];
+        dv.sync<Kokkos::HostSpace>();
+        EXPECT_NEAR(dv.view_host()(0, 0, 0), 10.0, 1e-6); // 1.0 * 10.0
+    }
+
+    // Test case 4: Output mapping verification
+    {
+        PhysicsSchemeConfig cfg_out_mapped = cfg;
+        cfg_out_mapped.options = YAML::Load("output_mapping: {total_nox_emissions: custom_nox}");
+
+        auto scheme = PhysicsFactory::CreateScheme(cfg_out_mapped);
+        scheme->Initialize(cfg_out_mapped.options, nullptr);
+
+        export_state.fields["custom_nox"] = create_dv("custom_nox", 0.0);
+        SetFieldValue("base_anthropogenic_nox", 1.0);
+
+        scheme->Run(import_state, export_state);
+
+        auto& dv = export_state.fields["custom_nox"];
+        dv.sync<Kokkos::HostSpace>();
+        EXPECT_NEAR(dv.view_host()(0, 0, 0), 2.0, 1e-6); // 1.0 * 2.0
+    }
+}

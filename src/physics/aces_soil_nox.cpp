@@ -28,8 +28,8 @@ double soil_wet_term(double gw) {
     return 5.5 * gw * std::exp(-5.55 * gw * gw);
 }
 
-void SoilNoxScheme::Initialize(const YAML::Node& /*config*/,
-                               AcesDiagnosticManager* /*diag_manager*/) {
+void SoilNoxScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) {
+    BasePhysicsScheme::Initialize(config, diag_manager);
     std::cout << "SoilNoxScheme: Initialized with Hudman et al. (2012) logic." << std::endl;
 }
 

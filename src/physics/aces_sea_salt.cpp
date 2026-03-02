@@ -25,7 +25,8 @@ double gong_source_normalized(double r80) {
            std::pow(10.0, 1.607 * std::exp(-b * b));
 }
 
-void SeaSaltScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* /*diag_manager*/) {
+void SeaSaltScheme::Initialize(const YAML::Node& config, AcesDiagnosticManager* diag_manager) {
+    BasePhysicsScheme::Initialize(config, diag_manager);
     // Pre-calculate the integral of the Gong source function (normalized to u10=1.0)
     const double dr = 0.05;         // Integration step in um (dry)
     const double betha = 2.0;       // r80 / r_dry
