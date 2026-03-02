@@ -19,6 +19,7 @@ jobs:
         find src include tests -name "*.cpp" -o -name "*.hpp" | xargs clang-format --dry-run --Werror
 
     - name: Run Clang-Tidy
+      shell: bash
       run: |
         if [ -f /opt/spack-environment/activate.sh ]; then
           source /opt/spack-environment/activate.sh
