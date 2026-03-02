@@ -247,7 +247,7 @@ TEST_F(PhysicsTest, NativeExampleMultipleInputs) {
 
         auto& dv = export_state.fields["total_nox_emissions"];
         dv.sync<Kokkos::HostSpace>();
-        EXPECT_NEAR(dv.view_host()(0, 0, 0), 2.0, 1e-6); // 1.0 * 2.0 (default multiplier)
+        EXPECT_NEAR(dv.view_host()(0, 0, 0), 2.0, 1e-6);  // 1.0 * 2.0 (default multiplier)
     }
 
     // Test case 2: Secondary input from Import State with mapping
@@ -266,7 +266,7 @@ TEST_F(PhysicsTest, NativeExampleMultipleInputs) {
 
         auto& dv = export_state.fields["total_nox_emissions"];
         dv.sync<Kokkos::HostSpace>();
-        EXPECT_NEAR(dv.view_host()(0, 0, 0), 5.0, 1e-6); // 1.0 * 5.0
+        EXPECT_NEAR(dv.view_host()(0, 0, 0), 5.0, 1e-6);  // 1.0 * 5.0
     }
 
     // Test case 3: Secondary input from Export State (chaining schemes)
@@ -285,7 +285,7 @@ TEST_F(PhysicsTest, NativeExampleMultipleInputs) {
 
         auto& dv = export_state.fields["total_nox_emissions"];
         dv.sync<Kokkos::HostSpace>();
-        EXPECT_NEAR(dv.view_host()(0, 0, 0), 10.0, 1e-6); // 1.0 * 10.0
+        EXPECT_NEAR(dv.view_host()(0, 0, 0), 10.0, 1e-6);  // 1.0 * 10.0
     }
 
     // Test case 4: Output mapping verification
@@ -303,6 +303,6 @@ TEST_F(PhysicsTest, NativeExampleMultipleInputs) {
 
         auto& dv = export_state.fields["custom_nox"];
         dv.sync<Kokkos::HostSpace>();
-        EXPECT_NEAR(dv.view_host()(0, 0, 0), 2.0, 1e-6); // 1.0 * 2.0
+        EXPECT_NEAR(dv.view_host()(0, 0, 0), 2.0, 1e-6);  // 1.0 * 2.0
     }
 }

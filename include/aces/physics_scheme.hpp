@@ -53,8 +53,7 @@ class BasePhysicsScheme : public PhysicsScheme {
      * @brief Default implementation of Initialize.
      * Can be overridden by subclasses if they need specific setup.
      */
-    void Initialize(const YAML::Node& config,
-                    AcesDiagnosticManager* /*diag_manager*/) override {
+    void Initialize(const YAML::Node& config, AcesDiagnosticManager* /*diag_manager*/) override {
         if (config["input_mapping"]) {
             for (auto const& node : config["input_mapping"]) {
                 input_mapping_[node.first.as<std::string>()] = node.second.as<std::string>();
