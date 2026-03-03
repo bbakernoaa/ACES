@@ -1,5 +1,6 @@
 #include "aces/aces_data_ingestor.hpp"
 
+#include <cmath>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -7,13 +8,13 @@
 
 #include "aces/aces_utils.hpp"
 
-// Forward declarations for CDEPS-inline API (as it would appear in a production
-// bridge). In this task, we assume the existence of these symbols in a real
-// CDEPS environment.
+// Forward declarations for CDEPS-inline C API (bridged via Fortran).
+// In a production build, these symbols are provided by src/io/aces_cdeps_bridge.F90
 extern "C" {
-void cdeps_inline_init(const char* config_file) __attribute__((weak));
-void cdeps_inline_read(double* buffer, const char* stream_name) __attribute__((weak));
-void cdeps_inline_finalize() __attribute__((weak));
+void aces_cdeps_init(const char* config_file);
+void aces_cdeps_read(double* buffer, const char* stream_name);
+void aces_cdeps_advance(int ymd, int tod);
+void aces_cdeps_finalize();
 }
 
 namespace aces {
@@ -80,10 +81,29 @@ void AcesDataIngestor::InitializeCDEPS(const AcesCdepsConfig& config) {
     for (size_t i = 0; i < config.streams.size(); ++i) {
         const auto& s = config.streams[i];
         std::string id = (i + 1 < 10) ? ("0" + std::to_string(i + 1)) : std::to_string(i + 1);
-        stream_file << "taxmode" << id << ": cycle" << "\n";
+        stream_file << "taxmode" << id << ": " << s.taxmode << "\n";
+        stream_file << "readMode" << id << ": " << s.readMode << "\n";
+        stream_file << "mapalgo" << id << ": " << s.mapalgo << "\n";
+        stream_file << "dtlimit" << id << ": " << s.dtlimit << "\n";
+        stream_file << "yearFirst" << id << ": " << s.yearFirst << "\n";
+        stream_file << "yearLast" << id << ": " << s.yearLast << "\n";
+        stream_file << "yearAlign" << id << ": " << s.yearAlign << "\n";
+        if (!s.meshfile.empty()) {
+            stream_file << "meshfile" << id << ": " << s.meshfile << "\n";
+        }
+        stream_file << "lev_dimname" << id << ": " << s.lev_dimname << "\n";
+        stream_file << "offset" << id << ": " << s.offset << "\n";
         stream_file << "tInterpAlgo" << id << ": " << s.interpolation_method << "\n";
         stream_file << "stream_data_files" << id << ": " << s.file_path << "\n";
-        stream_file << "stream_data_variables" << id << ": " << s.name << " " << s.name << "\n";
+        stream_file << "stream_data_variables" << id << ":";
+        if (s.variables.empty()) {
+            stream_file << " " << s.name << " " << s.name;
+        } else {
+            for (const auto& var : s.variables) {
+                stream_file << " " << var << " " << s.name << "_" << var;
+            }
+        }
+        stream_file << "\n";
     }
     stream_file.close();
 
@@ -94,39 +114,76 @@ void AcesDataIngestor::InitializeCDEPS(const AcesCdepsConfig& config) {
     nml_file << "/" << "\n";
     nml_file.close();
 
-    // 3. Initialize CDEPS-inline
-    if (cdeps_inline_init) {
-        cdeps_inline_init("cdeps_in.nml");
-    }
+    // 3. Initialize CDEPS-inline via Fortran bridge
+    aces_cdeps_init("cdeps_in.nml");
 }
 
 void AcesDataIngestor::FinalizeCDEPS() {
-    if (cdeps_inline_finalize) {
-        cdeps_inline_finalize();
-    }
+    aces_cdeps_finalize();
 }
 
 void AcesDataIngestor::IngestEmissionsInline(const AcesCdepsConfig& config,
-                                             AcesImportState& aces_state, int nx, int ny, int nz) {
+                                             AcesImportState& aces_state, int ymd, int tod, int nx,
+                                             int ny, int nz) {
     if (config.streams.empty()) return;
 
-    // Trigger read and map pointers for all configured streams.
-    // This allows the ingestion layer to be fully dynamic.
+    // Advance CDEPS to current model time via Fortran bridge
+    aces_cdeps_advance(ymd, tod);
+
+    // Trigger read and map pointers for all configured streams and variables.
     for (const auto& s : config.streams) {
-        if (aces_state.fields.find(s.name) == aces_state.fields.end()) {
-            Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> host_view(
-                "host_" + s.name, nx, ny, nz);
-            Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> device_view(
-                "device_" + s.name, nx, ny, nz);
-            aces_state.fields.try_emplace(s.name, device_view, host_view);
+        std::vector<std::string> vars_to_read;
+        if (s.variables.empty()) {
+            vars_to_read.push_back(s.name);
+        } else {
+            for (const auto& var : s.variables) {
+                vars_to_read.push_back(s.name + "_" + var);
+            }
         }
 
-        auto& dv = aces_state.fields[s.name];
-        if (cdeps_inline_read) {
-            cdeps_inline_read(dv.view_host().data(), s.name.c_str());
+        for (const auto& internal_name : vars_to_read) {
+            if (aces_state.fields.find(internal_name) == aces_state.fields.end()) {
+                Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> host_view(
+                    "host_" + internal_name, nx, ny, nz);
+                Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
+                    device_view("device_" + internal_name, nx, ny, nz);
+                aces_state.fields.try_emplace(internal_name, device_view, host_view);
+            }
+
+            auto& dv = aces_state.fields[internal_name];
+            auto host_v = dv.view_host();
+            // Read data via Fortran bridge
+            aces_cdeps_read(host_v.data(), internal_name.c_str());
+
+            // Data validation: ensure the ingested data is not all zero, is non-uniform, and has no
+            // NaNs. This verification only happens on rank 0 in a real simulation, but here we
+            // check for debugging.
+            bool all_zero = true;
+            bool uniform = true;
+            bool has_nan = false;
+            double first_val = (host_v.size() > 0) ? host_v.data()[0] : 0.0;
+            for (size_t i = 0; i < host_v.size(); ++i) {
+                double val = host_v.data()[i];
+                if (std::isnan(val)) has_nan = true;
+                if (val != 0.0) all_zero = false;
+                if (val != first_val) uniform = false;
+            }
+
+            if (has_nan) {
+                std::cerr << "ACES_DataIngestor: ERROR - field " << internal_name
+                          << " contains NaN after ingestion.\n";
+            }
+            if (all_zero) {
+                std::cerr << "ACES_DataIngestor: Warning - field " << internal_name
+                          << " is all zeros after ingestion.\n";
+            } else if (uniform) {
+                std::cerr << "ACES_DataIngestor: Warning - field " << internal_name
+                          << " is uniform (" << first_val << ") after ingestion.\n";
+            }
+
+            dv.modify<Kokkos::HostSpace>();
+            dv.sync<Kokkos::DefaultExecutionSpace::memory_space>();
         }
-        dv.modify<Kokkos::HostSpace>();
-        dv.sync<Kokkos::DefaultExecutionSpace::memory_space>();
     }
 }
 

@@ -26,6 +26,10 @@
  * engine.
  */
 
+extern "C" {
+void aces_get_clock_time(void* clock, int* ymd, int* tod);
+}
+
 namespace aces {
 
 /**
@@ -318,7 +322,13 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
         std::set<std::string> esmf_fields_set;
         std::set<std::string> cdeps_fields;
         for (const auto& s : data->config.cdeps_config.streams) {
-            cdeps_fields.insert(s.name);
+            if (s.variables.empty()) {
+                cdeps_fields.insert(s.name);
+            } else {
+                for (const auto& v : s.variables) {
+                    cdeps_fields.insert(s.name + "_" + v);
+                }
+            }
         }
 
         auto resolve_name = [&](const std::string& name) {
@@ -382,10 +392,15 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
     // Some fields might be 2D or have different Z dimensions (like ak/bk)
     // The ingestor currently assumes nx, ny, nz for all. We might need to adjust.
 
-    // 2. Emissions from CDEPS
+    // 2. Emissions from DEMS/CDEPS
     if (!data->config.cdeps_config.streams.empty()) {
-        data->ingestor.IngestEmissionsInline(data->config.cdeps_config, data->import_state, nx, ny,
-                                             nz);
+        int ymd = 0;
+        int tod = 0;
+        if (clock != nullptr) {
+            aces_get_clock_time(clock->ptr, &ymd, &tod);
+        }
+        data->ingestor.IngestEmissionsInline(data->config.cdeps_config, data->import_state, ymd,
+                                             tod, nx, ny, nz);
     }
     Kokkos::Profiling::popRegion();
 

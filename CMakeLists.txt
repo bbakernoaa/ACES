@@ -212,6 +212,12 @@ set(ACES_SRCS
 
 if(ACES_HAS_FORTRAN)
   list(APPEND ACES_SRCS
+    src/io/aces_cdeps_bridge.F90
+  )
+endif()
+
+if(ACES_HAS_FORTRAN)
+  list(APPEND ACES_SRCS
     src/physics/aces_fortran_bridge.cpp
     src/physics/legacy_fortran.F90
     src/physics/aces_sea_salt_fortran_bridge.cpp
@@ -347,6 +353,17 @@ target_link_libraries(example_driver
   aces
 )
 
+add_executable(test_cdeps_read
+  tests/test_cdeps_read.cpp
+)
+
+target_link_libraries(test_cdeps_read
+  PRIVATE
+  aces
+  GTest::gtest
+  netcdf
+)
+
 add_executable(hemco_mimic_driver
   tests/hemco_mimic_driver.cpp
 )
@@ -380,3 +397,4 @@ gtest_discover_tests(test_physics)
 gtest_discover_tests(test_aces_ingestor)
 gtest_discover_tests(test_diagnostics)
 gtest_discover_tests(test_hemco_mimic)
+gtest_discover_tests(test_cdeps_read)
