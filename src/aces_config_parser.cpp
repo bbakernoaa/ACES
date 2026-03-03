@@ -241,6 +241,15 @@ AcesConfig ParseConfig(const std::string& filename) {
                 CdepsStreamConfig stream;
                 stream.name = stream_node["name"].as<std::string>();
                 stream.file_path = stream_node["file"].as<std::string>();
+                if (stream_node["variables"]) {
+                    if (stream_node["variables"].IsSequence()) {
+                        for (auto const& v : stream_node["variables"]) {
+                            stream.variables.push_back(v.as<std::string>());
+                        }
+                    } else {
+                        stream.variables.push_back(stream_node["variables"].as<std::string>());
+                    }
+                }
                 if (stream_node["interpolation"]) {
                     stream.interpolation_method = stream_node["interpolation"].as<std::string>();
                 }

@@ -83,7 +83,15 @@ void AcesDataIngestor::InitializeCDEPS(const AcesCdepsConfig& config) {
         stream_file << "taxmode" << id << ": cycle" << "\n";
         stream_file << "tInterpAlgo" << id << ": " << s.interpolation_method << "\n";
         stream_file << "stream_data_files" << id << ": " << s.file_path << "\n";
-        stream_file << "stream_data_variables" << id << ": " << s.name << " " << s.name << "\n";
+        stream_file << "stream_data_variables" << id << ":";
+        if (s.variables.empty()) {
+            stream_file << " " << s.name << " " << s.name;
+        } else {
+            for (const auto& var : s.variables) {
+                stream_file << " " << var << " " << s.name << "_" << var;
+            }
+        }
+        stream_file << "\n";
     }
     stream_file.close();
 
@@ -110,23 +118,34 @@ void AcesDataIngestor::IngestEmissionsInline(const AcesCdepsConfig& config,
                                              AcesImportState& aces_state, int nx, int ny, int nz) {
     if (config.streams.empty()) return;
 
-    // Trigger read and map pointers for all configured streams.
+    // Trigger read and map pointers for all configured streams and variables.
     // This allows the ingestion layer to be fully dynamic.
     for (const auto& s : config.streams) {
-        if (aces_state.fields.find(s.name) == aces_state.fields.end()) {
-            Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> host_view(
-                "host_" + s.name, nx, ny, nz);
-            Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> device_view(
-                "device_" + s.name, nx, ny, nz);
-            aces_state.fields.try_emplace(s.name, device_view, host_view);
+        std::vector<std::string> vars_to_read;
+        if (s.variables.empty()) {
+            vars_to_read.push_back(s.name);
+        } else {
+            for (const auto& var : s.variables) {
+                vars_to_read.push_back(s.name + "_" + var);
+            }
         }
 
-        auto& dv = aces_state.fields[s.name];
-        if (cdeps_inline_read) {
-            cdeps_inline_read(dv.view_host().data(), s.name.c_str());
+        for (const auto& internal_name : vars_to_read) {
+            if (aces_state.fields.find(internal_name) == aces_state.fields.end()) {
+                Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> host_view(
+                    "host_" + internal_name, nx, ny, nz);
+                Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
+                    device_view("device_" + internal_name, nx, ny, nz);
+                aces_state.fields.try_emplace(internal_name, device_view, host_view);
+            }
+
+            auto& dv = aces_state.fields[internal_name];
+            if (cdeps_inline_read) {
+                cdeps_inline_read(dv.view_host().data(), internal_name.c_str());
+            }
+            dv.modify<Kokkos::HostSpace>();
+            dv.sync<Kokkos::DefaultExecutionSpace::memory_space>();
         }
-        dv.modify<Kokkos::HostSpace>();
-        dv.sync<Kokkos::DefaultExecutionSpace::memory_space>();
     }
 }
 

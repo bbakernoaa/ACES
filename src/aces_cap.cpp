@@ -318,7 +318,13 @@ void Run(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportState, ESM
         std::set<std::string> esmf_fields_set;
         std::set<std::string> cdeps_fields;
         for (const auto& s : data->config.cdeps_config.streams) {
-            cdeps_fields.insert(s.name);
+            if (s.variables.empty()) {
+                cdeps_fields.insert(s.name);
+            } else {
+                for (const auto& v : s.variables) {
+                    cdeps_fields.insert(s.name + "_" + v);
+                }
+            }
         }
 
         auto resolve_name = [&](const std::string& name) {

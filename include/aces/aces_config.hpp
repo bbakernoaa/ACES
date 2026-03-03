@@ -102,6 +102,7 @@ struct TemporalCycle {
 struct CdepsStreamConfig {
     std::string name;                  ///< Name of the stream.
     std::string file_path;             ///< Path to the NetCDF file.
+    std::vector<std::string> variables; ///< Variables to read from the stream.
     std::string interpolation_method;  ///< Interpolation method (e.g., "linear").
 };
 

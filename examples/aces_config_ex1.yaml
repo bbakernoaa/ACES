@@ -3,7 +3,7 @@ meteorology:
 
 species:
   co:
-    - field: "MACCITY"
+    - field: "MACCITY_CO"
       operation: "add"
       scale: 1.0
       scale_fields: ["hourly_scalfact"]
@@ -12,5 +12,6 @@ cdeps_inline_config:
   streams:
     - name: "MACCITY"
       file: "data/MACCity_4x5.nc"
+      variables: ["CO"]
     - name: "HOURLY_SCALFACT"
       file: "data/hourly.nc"

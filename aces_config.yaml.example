@@ -49,7 +49,7 @@ temporal_profiles:
 species:
   nox:
     # 1. Global anthropogenic emissions (Base Layer)
-    - field: "base_anthropogenic_nox"
+    - field: "INVENTORY_NOx"
       operation: "add"
       scale: 1.0
       category: "anthropogenic"
@@ -125,6 +125,7 @@ diagnostics:
 # 'nox_from_atmosphere') will be automatically pulled from the ESMF ImportState.
 cdeps_inline_config:
   streams:
-    - name: "base_anthropogenic_nox"
+    - name: "INVENTORY"
       file: "data/inventories/nox_2024.nc"
+      variables: ["NOx", "SO2"]
       interpolation: "linear"
