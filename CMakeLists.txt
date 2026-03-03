@@ -212,6 +212,12 @@ set(ACES_SRCS
 
 if(ACES_HAS_FORTRAN)
   list(APPEND ACES_SRCS
+    src/io/aces_cdeps_bridge.F90
+  )
+endif()
+
+if(ACES_HAS_FORTRAN)
+  list(APPEND ACES_SRCS
     src/physics/aces_fortran_bridge.cpp
     src/physics/legacy_fortran.F90
     src/physics/aces_sea_salt_fortran_bridge.cpp

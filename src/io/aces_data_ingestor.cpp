@@ -8,9 +8,15 @@
 
 #include "aces/aces_utils.hpp"
 
-// Forward declarations for CDEPS-inline C API.
+// Forward declarations for CDEPS-inline C API (bridged via Fortran).
 // We use weak attributes for flexibility in standalone development.
 extern "C" {
+void aces_cdeps_init(const char* config_file) __attribute__((weak));
+void aces_cdeps_read(double* buffer, const char* stream_name) __attribute__((weak));
+void aces_cdeps_advance(int ymd, int tod) __attribute__((weak));
+void aces_cdeps_finalize() __attribute__((weak));
+
+// Support for direct CDEPS symbols if available
 void cdeps_inline_init(const char* config_file) __attribute__((weak));
 void cdeps_inline_read(double* buffer, const char* stream_name) __attribute__((weak));
 void cdeps_inline_advance(int ymd, int tod) __attribute__((weak));
@@ -115,13 +121,17 @@ void AcesDataIngestor::InitializeCDEPS(const AcesCdepsConfig& config) {
     nml_file.close();
 
     // 3. Initialize CDEPS-inline
-    if (cdeps_inline_init) {
+    if (aces_cdeps_init) {
+        aces_cdeps_init("cdeps_in.nml");
+    } else if (cdeps_inline_init) {
         cdeps_inline_init("cdeps_in.nml");
     }
 }
 
 void AcesDataIngestor::FinalizeCDEPS() {
-    if (cdeps_inline_finalize) {
+    if (aces_cdeps_finalize) {
+        aces_cdeps_finalize();
+    } else if (cdeps_inline_finalize) {
         cdeps_inline_finalize();
     }
 }
@@ -132,7 +142,9 @@ void AcesDataIngestor::IngestEmissionsInline(const AcesCdepsConfig& config,
     if (config.streams.empty()) return;
 
     // Advance CDEPS to current model time
-    if (cdeps_inline_advance) {
+    if (aces_cdeps_advance) {
+        aces_cdeps_advance(ymd, tod);
+    } else if (cdeps_inline_advance) {
         cdeps_inline_advance(ymd, tod);
     }
 
@@ -158,7 +170,9 @@ void AcesDataIngestor::IngestEmissionsInline(const AcesCdepsConfig& config,
 
             auto& dv = aces_state.fields[internal_name];
             auto host_v = dv.view_host();
-            if (cdeps_inline_read) {
+            if (aces_cdeps_read) {
+                aces_cdeps_read(host_v.data(), internal_name.c_str());
+            } else if (cdeps_inline_read) {
                 cdeps_inline_read(host_v.data(), internal_name.c_str());
             }
 
