@@ -7,8 +7,7 @@
 
 #include "aces/aces_utils.hpp"
 
-namespace aces {
-namespace test {
+namespace aces::test {
 
 class AcesUtilsTest : public ::testing::Test {
    protected:
@@ -23,7 +22,7 @@ TEST_F(AcesUtilsTest, WrapESMCFieldUpdatesRawData) {
     const int nx = 10;
     const int ny = 5;
     const int nz = 2;
-    std::vector<double> raw_data(nx * ny * nz, 0.0);
+    std::vector<double> raw_data(static_cast<size_t>(nx) * ny * nz, 0.0);
 
     UnmanagedHostView3D view;
 
