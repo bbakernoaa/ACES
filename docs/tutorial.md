@@ -52,9 +52,9 @@ void MyScheme::Run(AcesImportState& import, AcesExportState& export_s) {
     auto base_nox = import.fields["base_nox"].view_device();
     auto nox = export_s.fields["nox"].view_device();
 
-    int nx = nox.extent(0);
-    int ny = nox.extent(1);
-    int nz = nox.extent(2);
+    int nx = static_cast<int>(nox.extent(0));
+    int ny = static_cast<int>(nox.extent(1));
+    int nz = static_cast<int>(nox.extent(2));
 
     Kokkos::parallel_for("MyKernel",
         Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0,0,0}, {nx,ny,nz}),

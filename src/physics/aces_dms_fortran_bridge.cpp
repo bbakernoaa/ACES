@@ -41,9 +41,9 @@ void DMSFortranScheme::Run(AcesImportState& import_state, AcesExportState& expor
     dv_seaconc.sync<Kokkos::HostSpace>();
     dv_dms_emis.sync<Kokkos::HostSpace>();
 
-    int nx = dv_dms_emis.extent(0);
-    int ny = dv_dms_emis.extent(1);
-    int nz = dv_dms_emis.extent(2);
+    int nx = static_cast<int>(dv_dms_emis.extent(0));
+    int ny = static_cast<int>(dv_dms_emis.extent(1));
+    int nz = static_cast<int>(dv_dms_emis.extent(2));
 
     run_dms_fortran(dv_u10.view_host().data(), dv_tskin.view_host().data(),
                     dv_seaconc.view_host().data(), dv_dms_emis.view_host().data(), nx, ny, nz);

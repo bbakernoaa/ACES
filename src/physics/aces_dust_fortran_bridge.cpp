@@ -41,9 +41,9 @@ void DustFortranScheme::Run(AcesImportState& import_state, AcesExportState& expo
     dv_sand.sync<Kokkos::HostSpace>();
     dv_dust.sync<Kokkos::HostSpace>();
 
-    int nx = dv_dust.extent(0);
-    int ny = dv_dust.extent(1);
-    int nz = dv_dust.extent(2);
+    int nx = static_cast<int>(dv_dust.extent(0));
+    int ny = static_cast<int>(dv_dust.extent(1));
+    int nz = static_cast<int>(dv_dust.extent(2));
 
     run_dust_fortran(dv_u10.view_host().data(), dv_gwet.view_host().data(),
                      dv_sand.view_host().data(), dv_dust.view_host().data(), nx, ny, nz);

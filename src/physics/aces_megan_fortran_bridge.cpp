@@ -48,9 +48,9 @@ void MeganFortranScheme::Run(AcesImportState& import_state, AcesExportState& exp
     dv_pardf.sync<Kokkos::HostSpace>();
     dv_suncos.sync<Kokkos::HostSpace>();
 
-    int nx = dv_isop.extent(0);
-    int ny = dv_isop.extent(1);
-    int nz = dv_isop.extent(2);
+    int nx = static_cast<int>(dv_isop.extent(0));
+    int ny = static_cast<int>(dv_isop.extent(1));
+    int nz = static_cast<int>(dv_isop.extent(2));
 
     run_megan_fortran(dv_temp.view_host().data(), dv_lai.view_host().data(),
                       dv_pardr.view_host().data(), dv_pardf.view_host().data(),
