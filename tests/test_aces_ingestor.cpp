@@ -60,10 +60,10 @@ TEST_F(IngestorTest, ConfigFileGeneration) {
     bool found_file = false;
     bool found_var = false;
     while (std::getline(stream_file, line)) {
-        if (line.find("- path1.nc") != std::string::npos) {
+        if (line.find("  path1.nc") != std::string::npos) {
             found_file = true;
         }
-        if (line.find("- VAR_FILE VAR_MODEL") != std::string::npos) {
+        if (line.find("  VAR_FILE VAR_MODEL") != std::string::npos) {
             found_var = true;
         }
     }

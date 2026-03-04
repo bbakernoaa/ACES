@@ -9,11 +9,11 @@
 
 // Forward declarations for ACES-CDEPS bridge (defined in aces_cdeps_bridge.F90)
 extern "C" {
-void aces_cdeps_init(void* gcomp, void* clock, void* mesh, const char* stream_file,
-                     int* rc) __attribute__((weak));
+void aces_cdeps_init(void* gcomp, void* clock, void* mesh, const char* stream_file, int* rc)
+    __attribute__((weak));
 void aces_cdeps_advance(void* clock, int* rc) __attribute__((weak));
-void aces_cdeps_get_ptr(int stream_idx, const char* fldname, void** data_ptr,
-                        int* rc) __attribute__((weak));
+void aces_cdeps_get_ptr(int stream_idx, const char* fldname, void** data_ptr, int* rc)
+    __attribute__((weak));
 void cdeps_inline_finalize() __attribute__((weak));
 }
 

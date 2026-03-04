@@ -17,6 +17,10 @@
 #include "aces/aces_utils.hpp"
 #include "aces/physics_scheme.hpp"
 
+extern "C" {
+void aces_get_mesh_from_field(void* field, void** mesh, int* rc);
+}
+
 /**
  * @file aces_cap.cpp
  * @brief ESMF cap for the ACES component.
@@ -197,23 +201,22 @@ void Initialize(ESMC_GridComp comp, ESMC_State importState, ESMC_State exportSta
         ESMC_Field discovery_field;
         discovery_field.ptr = nullptr;
         if (!data->config.species_layers.empty()) {
-            std::string ref_name = "total_" + data->config.species_layers.begin()->first + "_emissions";
+            std::string ref_name =
+                "total_" + data->config.species_layers.begin()->first + "_emissions";
             ESMC_StateGetField(exportState, ref_name.c_str(), &discovery_field);
         }
 
         if (discovery_field.ptr != nullptr) {
-            ESMC_Grid grid;
-            int local_rc = ESMC_FieldGetGrid(discovery_field, &grid);
-            if (local_rc == ESMF_SUCCESS && grid.ptr != nullptr) {
-                mesh = ESMC_MeshCreateFromGrid(grid, &local_rc);
-                if (local_rc != ESMF_SUCCESS) mesh.ptr = nullptr;
-            }
+            int local_rc;
+            aces_get_mesh_from_field(discovery_field.ptr, &mesh.ptr, &local_rc);
+            if (local_rc != ESMF_SUCCESS) mesh.ptr = nullptr;
         }
 
         if (clock != nullptr) {
             data->ingestor.InitializeCDEPS(comp, *clock, mesh, data->config.cdeps_config);
         } else {
-            std::cerr << "ACES_Initialize: Warning - Clock is null. CDEPS initialization skipped.\n";
+            std::cerr
+                << "ACES_Initialize: Warning - Clock is null. CDEPS initialization skipped.\n";
         }
 
         // Advertise if not already done (fallback for standalone drivers)
