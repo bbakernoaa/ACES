@@ -13,10 +13,14 @@ if(CMAKE_Fortran_COMPILER)
     enable_language(Fortran)
     set(ACES_HAS_FORTRAN ON)
     # Ensure Fortran modules are placed in a central directory
+    # We set it here only if it's not already defined to avoid overriding
+    # subproject settings if they are already doing something specific.
     if(NOT CMAKE_Fortran_MODULE_DIRECTORY)
         set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/fortran_modules)
     endif()
     include_directories(${CMAKE_Fortran_MODULE_DIRECTORY})
+    # Also add the directory to search paths for subprojects
+    set(ENV{CMAKE_Fortran_MODULE_DIRECTORY} ${CMAKE_Fortran_MODULE_DIRECTORY})
 else()
     message(WARNING "Fortran compiler not found. Fortran features will be disabled.")
 endif()
@@ -328,17 +332,28 @@ add_subdirectory(standalone_nuopc)
 # Python script tests
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_Interpreter_FOUND)
-    add_test(
-        NAME test_hemco_to_aces_python
-        COMMAND ${Python3_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_converters.py)
-    set_tests_properties(test_hemco_to_aces_python PROPERTIES ENVIRONMENT
-                                                             "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/scripts")
+    # Check if pytest is available before adding python tests
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE} -c "import pytest"
+        RESULT_VARIABLE PYTEST_RESULT
+        OUTPUT_QUIET ERROR_QUIET)
 
-    add_test(
-        NAME test_scripts_python
-        COMMAND ${Python3_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_scripts.py)
-    set_tests_properties(test_scripts_python PROPERTIES ENVIRONMENT
-                                                        "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/scripts")
+    if(PYTEST_RESULT EQUAL 0)
+        add_test(
+            NAME test_hemco_to_aces_python
+            COMMAND ${Python3_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_converters.py)
+        set_tests_properties(test_hemco_to_aces_python PROPERTIES ENVIRONMENT
+                                                                 "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/scripts")
+
+        add_test(
+            NAME test_scripts_python
+            COMMAND ${Python3_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_scripts.py)
+        set_tests_properties(test_scripts_python PROPERTIES ENVIRONMENT
+                                                            "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/scripts")
+    else()
+        message(WARNING "pytest not found. Python-based tests will be skipped. "
+                        "Install with: pip install pytest pyyaml jinja2")
+    endif()
 endif()
 
 include(GoogleTest)
