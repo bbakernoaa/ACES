@@ -16,10 +16,10 @@
 #include <random>
 #include <vector>
 
-#include "aces/aces_config.hpp"
-#include "aces/aces_data_ingestor.hpp"
+#include "cece/cece_config.hpp"
+#include "cece/cece_data_ingestor.hpp"
 
-namespace aces::test {
+namespace cece::test {
 
 class FieldResolutionPriorityTest : public ::testing::Test {
    protected:
@@ -40,7 +40,7 @@ class FieldResolutionPriorityTest : public ::testing::Test {
  * **Validates: Requirements 3.3**
  */
 TEST_F(FieldResolutionPriorityTest, FieldNotFound) {
-    AcesDataIngestor ingestor;
+    CeceDataIngestor ingestor;
     EXPECT_FALSE(ingestor.HasDataIngesterField("nonexistent_field"));
     EXPECT_FALSE(ingestor.HasCachedField("nonexistent_field"));
 }
@@ -51,7 +51,7 @@ TEST_F(FieldResolutionPriorityTest, FieldNotFound) {
  * **Validates: Requirements 3.3**
  */
 TEST_F(FieldResolutionPriorityTest, HasCachedFieldMatchesHasDataIngesterField) {
-    AcesDataIngestor ingestor;
+    CeceDataIngestor ingestor;
     const std::string name = "some_field";
     EXPECT_EQ(ingestor.HasDataIngesterField(name), ingestor.HasCachedField(name));
 }
@@ -62,7 +62,7 @@ TEST_F(FieldResolutionPriorityTest, HasCachedFieldMatchesHasDataIngesterField) {
  * **Validates: Requirements 3.3**
  */
 TEST_F(FieldResolutionPriorityTest, ResolveFieldReturnsEmptyWhenAbsent) {
-    AcesDataIngestor ingestor;
+    CeceDataIngestor ingestor;
     auto view = ingestor.ResolveField("missing", 4, 4, 4);
     EXPECT_EQ(view.data(), nullptr);
 }
@@ -74,13 +74,10 @@ TEST_F(FieldResolutionPriorityTest, ResolveFieldReturnsEmptyWhenAbsent) {
  */
 TEST_F(FieldResolutionPriorityTest, ResolveFieldReturnTypeIsUnmanaged) {
     using ExpectedViewType =
-        Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace,
-                     Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+        Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
 
-    static_assert(
-        std::is_same_v<decltype(std::declval<AcesDataIngestor>().ResolveField("", 0, 0, 0)),
-                       ExpectedViewType>,
-        "ResolveField must return a view with Kokkos::MemoryTraits<Kokkos::Unmanaged>");
+    static_assert(std::is_same_v<decltype(std::declval<CeceDataIngestor>().ResolveField("", 0, 0, 0)), ExpectedViewType>,
+                  "ResolveField must return a view with Kokkos::MemoryTraits<Kokkos::Unmanaged>");
 
     SUCCEED();
 }
@@ -91,26 +88,23 @@ TEST_F(FieldResolutionPriorityTest, ResolveFieldReturnTypeIsUnmanaged) {
  * **Validates: Requirements 3.3**
  */
 TEST_F(FieldResolutionPriorityTest, FieldNameVariations) {
-    AcesDataIngestor ingestor;
-    const std::vector<std::string> names = {
-        "CO",
-        "carbon_monoxide",
-        "NOx_emissions_total",
-        "CEDS_CO_anthro_2020",
-        "field123",
-        "a",
-        "very_long_field_name_with_many_components_for_testing"};
+    CeceDataIngestor ingestor;
+    const std::vector<std::string> names = {"CO",
+                                            "carbon_monoxide",
+                                            "NOx_emissions_total",
+                                            "CEDS_CO_anthro_2020",
+                                            "field123",
+                                            "a",
+                                            "very_long_field_name_with_many_components_for_testing"};
 
     for (const auto& name : names) {
-        EXPECT_FALSE(ingestor.HasDataIngesterField(name))
-            << "Field '" << name << "' should not be in cache before any ingestion";
+        EXPECT_FALSE(ingestor.HasDataIngesterField(name)) << "Field '" << name << "' should not be in cache before any ingestion";
         auto view = ingestor.ResolveField(name, 5, 5, 5);
-        EXPECT_EQ(view.data(), nullptr)
-            << "ResolveField should return empty view for '" << name << "' when not in cache";
+        EXPECT_EQ(view.data(), nullptr) << "ResolveField should return empty view for '" << name << "' when not in cache";
     }
 }
 
-}  // namespace aces::test
+}  // namespace cece::test
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

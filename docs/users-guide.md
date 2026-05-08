@@ -1,10 +1,10 @@
 # User's Guide
 
-This guide covers the prerequisites, build process, configuration, and execution of the ACES component.
+This guide covers the prerequisites, build process, configuration, and execution of the CECE component.
 
 ## Prerequisites
 
-To build ACES, you need the following dependencies:
+To build CECE, you need the following dependencies:
 
 - **C++20 Compiler** (GCC 10+, Clang 12+)
 - **CMake** (3.20+)
@@ -36,7 +36,7 @@ If you encounter `overlayfs` errors or other Docker-related environment issues w
 ./scripts/fix_docker_and_setup.sh
 ```
 
-## Building ACES
+## Building CECE
 
 ### Standard Build in JCSDA Docker
 
@@ -70,7 +70,7 @@ cmake .. -DKokkos_ENABLE_SERIAL=ON -DKokkos_ENABLE_OPENMP=ON
 
 ## YAML Configuration
 
-ACES is configured using a YAML file that defines emission species, data sources, scaling factors, and processing parameters. The configuration system is built around the powerful **Stacking Engine** that combines multiple emission layers with sophisticated hierarchy and scaling rules.
+CECE is configured using a YAML file that defines emission species, data sources, scaling factors, and processing parameters. The configuration system is built around the powerful **Stacking Engine** that combines multiple emission layers with sophisticated hierarchy and scaling rules.
 
 For complete configuration reference with all available options, see the [Configuration Documentation](configuration.md).
 
@@ -127,7 +127,7 @@ physics_schemes:
       r_sala_max: 0.5
 
 # TIDE data streams for external inventories
-aces_data:
+cece_data:
   streams:
     - name: "GLOBAL_INVENTORY"
       file: "/data/inventories/global_emissions.nc"
@@ -147,7 +147,7 @@ diagnostics:
 output:
   enabled: true
   directory: "./output"
-  filename_pattern: "aces_{YYYY}{MM}{DD}_{HH}.nc"
+  filename_pattern: "cece_{YYYY}{MM}{DD}_{HH}.nc"
   frequency_steps: 1
   fields: ["co", "nox"]
 ```
@@ -202,14 +202,14 @@ physics_schemes:
       dust_source_strength: 1.0
 
 # TIDE configuration (optional)
-aces_data:
+cece_data:
   streams_yaml: /path/to/streams.yaml
   data_root: /data/emissions
 
 # Output configuration (for standalone mode)
 output:
-  directory: ./aces_output
-  filename_pattern: "aces_{YYYY}{MM}{DD}_{HH}{mm}{ss}.nc"
+  directory: ./cece_output
+  filename_pattern: "cece_{YYYY}{MM}{DD}_{HH}{mm}{ss}.nc"
   frequency_steps: 1
   fields:
     - CO
@@ -256,14 +256,14 @@ streams:
     yearAlign: 2020
 ```
 
-## Running ACES
+## Running CECE
 
 ### Standalone NUOPC Driver
 
-The standalone NUOPC driver (`aces_nuopc_driver`) demonstrates the standard NUOPC lifecycle and how to manage ACES as a child model.
+The standalone NUOPC driver (`cece_nuopc_driver`) demonstrates the standard NUOPC lifecycle and how to manage CECE as a child model.
 
-1.  **Configure**: Edit `aces_config.yaml` to specify your species, layers, and simulation parameters.
-    The driver can be controlled via a `driver` block in `aces_config.yaml`:
+1.  **Configure**: Edit `cece_config.yaml` to specify your species, layers, and simulation parameters.
+    The driver can be controlled via a `driver` block in `cece_config.yaml`:
     ```yaml
     driver:
       nx: 72
@@ -285,14 +285,14 @@ The standalone NUOPC driver (`aces_nuopc_driver`) demonstrates the standard NUOP
 3.  **Run**:
     ```bash
     cd build
-    ./bin/aces_nuopc_driver
+    ./bin/cece_nuopc_driver
     ```
 
 ### Basic Example Driver
 
-ACES also provides a simpler `example_driver` for basic C++ integration tests.
+CECE also provides a simpler `example_driver` for basic C++ integration tests.
 
-1.  **Configure**: Edit `aces_config.yaml` to specify your species and layers.
+1.  **Configure**: Edit `cece_config.yaml` to specify your species and layers.
 2.  **Run**:
     ```bash
     cd build
@@ -394,22 +394,22 @@ GPU kernel execution is slower than CPU
 For multi-core CPU execution, set the number of OpenMP threads:
 ```bash
 export OMP_NUM_THREADS=16
-./build/bin/aces_nuopc_driver
+./build/bin/cece_nuopc_driver
 ```
 
 ### GPU Performance
 
 For GPU execution, set the device ID:
 ```bash
-export ACES_DEVICE_ID=0
-./build/bin/aces_nuopc_driver
+export CECE_DEVICE_ID=0
+./build/bin/cece_nuopc_driver
 ```
 
 ## Output Files
 
-When running in standalone mode with output enabled, ACES writes NetCDF files to the configured output directory. Files follow the naming pattern:
+When running in standalone mode with output enabled, CECE writes NetCDF files to the configured output directory. Files follow the naming pattern:
 ```
-aces_YYYYMMDD_HHmmss.nc
+cece_YYYYMMDD_HHmmss.nc
 ```
 
 Each file contains:
@@ -419,8 +419,56 @@ Each file contains:
 
 Files are CF-1.8 compliant and can be inspected with standard tools:
 ```bash
-ncdump -h aces_20240101_000000.nc
+ncdump -h cece_20240101_000000.nc
 ```
+
+## Physics Schemes
+
+CECE includes a suite of process-based physics schemes for computing emissions from natural and anthropogenic sources. Each scheme is available as both a native C++ (Kokkos) implementation and a Fortran bridge variant. Schemes are enabled and configured through the `physics_schemes` block in your YAML configuration.
+
+| Scheme | Description | Documentation |
+| --- | --- | --- |
+| DMS | Dimethyl sulfide sea-air exchange fluxes | [DMS](dms.md) |
+| Sea Salt | Size-resolved sea salt aerosol emissions (Gong 2003) | [Sea Salt](sea_salt.md) |
+| Dust (Ginoux Legacy) | Single-bin mineral dust emissions (Ginoux 2001) | [Dust](dust.md) |
+| Ginoux (GOCART2G) | Multi-bin dust emissions with Marticorena threshold | [Ginoux](ginoux.md) |
+| FENGSHA | Physically-based saltation dust model with Fécan correction | [FENGSHA](fengsha.md) |
+| K14 | Kok et al. (2014) dust scheme with full soil physics | [K14](k14.md) |
+| MEGAN | Biogenic isoprene emissions (Model of Emissions of Gases and Aerosols from Nature) | [MEGAN](megan.md) |
+| Lightning NOx | Lightning-produced NOx from convective cloud top height | [Lightning NOx](lightning_nox.md) |
+| Soil NOx | Soil NOx from microbial nitrification/denitrification | [Soil NOx](soil_nox.md) |
+| Volcano | Volcanic SO₂ point-source emissions with vertical distribution | [Volcano](volcano.md) |
+
+For guidance on developing your own physics schemes, see the [Physics Scheme Development Guide](physics_scheme_development.md).
+
+## Python Interface
+
+CECE provides Python bindings through pybind11 that expose the full C++ core to Python with type-safe access, automatic memory management, and zero-copy NumPy interop.
+
+```python
+import cece
+import numpy as np
+
+config = cece.load_config("cece_config.yaml")
+cece.initialize(config)
+
+state = cece.CeceState(nx=144, ny=96, nz=72)
+state.add_import_field("TEMPERATURE", np.asfortranarray(np.zeros((144, 96, 72))))
+
+cece.compute(state, hour=12, day_of_week=3, month=7)
+co_emissions = state.get_export_field("CO_EMIS")
+
+cece.finalize()
+```
+
+To build with Python support, enable the `BUILD_PYTHON_BINDINGS` CMake option:
+
+```bash
+cmake .. -DBUILD_PYTHON_BINDINGS=ON
+make -j$(nproc)
+```
+
+For the full API reference, configuration management, state handling, NumPy zero-copy details, and migration notes, see the [Python Bindings Documentation](python_bindings.md).
 
 ## Next Steps
 
@@ -428,3 +476,5 @@ ncdump -h aces_20240101_000000.nc
 - Check [Physics Scheme Development](physics_scheme_development.md) for adding new schemes
 - Review [HEMCO Migration Guide](hemco_migration.md) for migrating from HEMCO
 - See [Examples](examples.md) for common use cases
+- Explore the [Python Bindings](python_bindings.md) for scripting and integration
+- Browse individual [physics scheme docs](#physics-schemes) for algorithm details and configuration

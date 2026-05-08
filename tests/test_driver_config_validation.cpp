@@ -15,7 +15,7 @@
 #include <fstream>
 #include <string>
 
-#include "aces/aces_config.hpp"
+#include "cece/cece_config.hpp"
 
 // ESMF C API for ISO8601 validation
 extern "C" {
@@ -25,8 +25,7 @@ extern "C" {
 // Forward declarations for Fortran ISO8601 functions
 extern "C" {
 void init_iso8601_utils_c_wrapper();
-void parse_iso8601_to_esmf_time_c_wrapper(const char* iso_str, int* yy, int* mm, int* dd, int* hh,
-                                          int* mn, int* ss, int* rc);
+void parse_iso8601_to_esmf_time_c_wrapper(const char* iso_str, int* yy, int* mm, int* dd, int* hh, int* mn, int* ss, int* rc);
 }
 
 namespace {
@@ -76,7 +75,10 @@ int CompareISO8601Times(const std::string& t1, const std::string& t2) {
 class DriverConfigValidationTest : public ::testing::Test {
    protected:
     void SetUp() override {
-        test_config_file = "test_driver_config_validation.yaml";
+        // Use a unique filename per test to avoid race conditions when
+        // ctest runs multiple test binaries in parallel (-j).
+        const auto* info = ::testing::UnitTest::GetInstance()->current_test_info();
+        test_config_file = std::string("test_dcv_") + info->name() + ".yaml";
 
         // Initialize ESMF for ISO8601 utilities
         int rc = ESMC_Initialize(nullptr, ESMC_ArgLast);
@@ -188,7 +190,7 @@ species:
 )");
 
     // Parse config (should succeed)
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     // Verify times are parsed correctly
     EXPECT_EQ(config.driver_config.start_time, "2020-01-01T00:00:00");
@@ -213,7 +215,7 @@ species:
 )");
 
     // Parse config
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     // Verify times are equal
     int cmp = CompareISO8601Times(config.driver_config.start_time, config.driver_config.end_time);
@@ -234,7 +236,7 @@ species:
 )");
 
     // Parse config
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     // Verify start > end (invalid)
     int cmp = CompareISO8601Times(config.driver_config.start_time, config.driver_config.end_time);
@@ -261,7 +263,7 @@ TEST_F(DriverConfigValidationTest, PositiveTimestepValid) {
                             "    - field: \"TEST_CO\"\n"
                             "      operation: \"add\"\n");
 
-        aces::AcesConfig config = aces::ParseConfig(test_config_file);
+        cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
         EXPECT_EQ(config.driver_config.timestep_seconds, timestep);
         EXPECT_GT(config.driver_config.timestep_seconds, 0) << "Timestep must be positive";
@@ -280,7 +282,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     // Zero timestep is invalid
     EXPECT_EQ(config.driver_config.timestep_seconds, 0);
@@ -299,7 +301,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     // Negative timestep is invalid
     EXPECT_EQ(config.driver_config.timestep_seconds, -3600);
@@ -313,8 +315,7 @@ species:
 // Test 11: Positive grid dimensions are valid
 // Requirements: 14.7
 TEST_F(DriverConfigValidationTest, PositiveGridDimensionsValid) {
-    std::vector<std::pair<int, int>> valid_dimensions = {
-        {1, 1}, {4, 4}, {8, 8}, {16, 16}, {32, 32}, {64, 64}, {128, 128}, {360, 180}, {720, 360}};
+    std::vector<std::pair<int, int>> valid_dimensions = {{1, 1}, {4, 4}, {8, 8}, {16, 16}, {32, 32}, {64, 64}, {128, 128}, {360, 180}, {720, 360}};
 
     for (const auto& [nx, ny] : valid_dimensions) {
         WriteTestConfig(test_config_file,
@@ -331,7 +332,7 @@ TEST_F(DriverConfigValidationTest, PositiveGridDimensionsValid) {
                             "    - field: \"TEST_CO\"\n"
                             "      operation: \"add\"\n");
 
-        aces::AcesConfig config = aces::ParseConfig(test_config_file);
+        cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
         EXPECT_EQ(config.driver_config.grid.nx, nx);
         EXPECT_EQ(config.driver_config.grid.ny, ny);
@@ -355,7 +356,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
     EXPECT_EQ(config.driver_config.grid.nx, 0);
     EXPECT_LE(config.driver_config.grid.nx, 0) << "nx = 0 is invalid";
 
@@ -371,7 +372,7 @@ species:
       operation: "add"
 )");
 
-    config = aces::ParseConfig(test_config_file);
+    config = cece::ParseConfig(test_config_file);
     EXPECT_EQ(config.driver_config.grid.ny, 0);
     EXPECT_LE(config.driver_config.grid.ny, 0) << "ny = 0 is invalid";
 }
@@ -391,7 +392,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
     EXPECT_EQ(config.driver_config.grid.nx, -4);
     EXPECT_LT(config.driver_config.grid.nx, 0) << "nx < 0 is invalid";
 
@@ -407,7 +408,7 @@ species:
       operation: "add"
 )");
 
-    config = aces::ParseConfig(test_config_file);
+    config = cece::ParseConfig(test_config_file);
     EXPECT_EQ(config.driver_config.grid.ny, -4);
     EXPECT_LT(config.driver_config.grid.ny, 0) << "ny < 0 is invalid";
 }
@@ -426,7 +427,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     // Verify default values
     EXPECT_EQ(config.driver_config.start_time, "2020-01-01T00:00:00");
@@ -460,7 +461,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     // Verify custom value
     EXPECT_EQ(config.driver_config.start_time, "2021-06-15T12:00:00");
@@ -489,7 +490,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     EXPECT_EQ(config.driver_config.timestep_seconds, 86400);  // 1 day
     EXPECT_GT(config.driver_config.timestep_seconds, 0);
@@ -507,7 +508,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     EXPECT_EQ(config.driver_config.timestep_seconds, 1);  // 1 second
     EXPECT_GT(config.driver_config.timestep_seconds, 0);
@@ -527,7 +528,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     EXPECT_EQ(config.driver_config.grid.nx, 1440);
     EXPECT_EQ(config.driver_config.grid.ny, 720);
@@ -549,7 +550,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     EXPECT_EQ(config.driver_config.grid.nx, 1);
     EXPECT_EQ(config.driver_config.grid.ny, 1);
@@ -570,7 +571,7 @@ species:
       operation: "add"
 )");
 
-    aces::AcesConfig config = aces::ParseConfig(test_config_file);
+    cece::CeceConfig config = cece::ParseConfig(test_config_file);
 
     EXPECT_EQ(config.driver_config.start_time, "2020-02-29T00:00:00");
     EXPECT_TRUE(IsValidISO8601(config.driver_config.start_time));

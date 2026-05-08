@@ -4,11 +4,11 @@
 #include <cmath>
 #include <map>
 
-#include "aces/aces_compute.hpp"
-#include "aces/aces_config.hpp"
-#include "aces/aces_stacking_engine.hpp"
+#include "cece/cece_compute.hpp"
+#include "cece/cece_config.hpp"
+#include "cece/cece_stacking_engine.hpp"
 
-namespace aces {
+namespace cece {
 
 /**
  * @brief FieldResolver implementation for vertical distribution testing.
@@ -51,12 +51,11 @@ class VerticalDistributionFieldResolver : public FieldResolver {
     UnmanagedHostView3D ResolveExport(const std::string& name, int, int, int) override {
         return fields[name].view_host();
     }
-    Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace>
-    ResolveImportDevice(const std::string& name, int, int, int) override {
+    Kokkos::View<const double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveImportDevice(const std::string& name, int, int,
+                                                                                                         int) override {
         return fields[name].view_device();
     }
-    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveExportDevice(
-        const std::string& name, int, int, int) override {
+    Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::DefaultExecutionSpace> ResolveExportDevice(const std::string& name, int, int, int) override {
         return fields[name].view_device();
     }
 };
@@ -82,7 +81,7 @@ class VerticalDistributionSingleTest : public ::testing::Test {
  */
 TEST_F(VerticalDistributionSingleTest, SingleLayerPlacement) {
     int nx = 3, ny = 2, nz = 5;
-    AcesConfig config;
+    CeceConfig config;
 
     // Configure vertical distribution: SINGLE method, layer 2
     EmissionLayer layer;
@@ -115,8 +114,7 @@ TEST_F(VerticalDistributionSingleTest, SingleLayerPlacement) {
         for (int j = 0; j < ny; ++j) {
             for (int k = 0; k < nz; ++k) {
                 double expected = (k == 2) ? (10.0 + i + j) : 0.0;
-                EXPECT_NEAR(resolver.GetValue("CO", i, j, k), expected, 1e-9)
-                    << "Mismatch at (" << i << "," << j << "," << k << ")";
+                EXPECT_NEAR(resolver.GetValue("CO", i, j, k), expected, 1e-9) << "Mismatch at (" << i << "," << j << "," << k << ")";
             }
         }
     }
@@ -132,7 +130,7 @@ TEST_F(VerticalDistributionSingleTest, SingleLayerPlacement) {
  */
 TEST_F(VerticalDistributionSingleTest, MassConservationDifferentLayers) {
     int nx = 4, ny = 3, nz = 10;
-    AcesConfig config;
+    CeceConfig config;
 
     // Test with layer 5
     EmissionLayer layer;
@@ -183,7 +181,7 @@ TEST_F(VerticalDistributionSingleTest, MassConservationDifferentLayers) {
  */
 TEST_F(VerticalDistributionSingleTest, SingleLayerBoundaryZero) {
     int nx = 2, ny = 2, nz = 8;
-    AcesConfig config;
+    CeceConfig config;
 
     EmissionLayer layer;
     layer.operation = "add";
@@ -236,7 +234,7 @@ TEST_F(VerticalDistributionSingleTest, SingleLayerBoundaryZero) {
  */
 TEST_F(VerticalDistributionSingleTest, SingleLayerBoundaryTop) {
     int nx = 2, ny = 2, nz = 8;
-    AcesConfig config;
+    CeceConfig config;
 
     EmissionLayer layer;
     layer.operation = "add";
@@ -289,7 +287,7 @@ TEST_F(VerticalDistributionSingleTest, SingleLayerBoundaryTop) {
  */
 TEST_F(VerticalDistributionSingleTest, SingleWithScaleFactor) {
     int nx = 2, ny = 2, nz = 5;
-    AcesConfig config;
+    CeceConfig config;
 
     EmissionLayer layer;
     layer.operation = "add";
@@ -340,7 +338,7 @@ TEST_F(VerticalDistributionSingleTest, SingleWithScaleFactor) {
  */
 TEST_F(VerticalDistributionSingleTest, SingleWithMask) {
     int nx = 3, ny = 3, nz = 4;
-    AcesConfig config;
+    CeceConfig config;
 
     EmissionLayer layer;
     layer.operation = "add";
@@ -403,7 +401,7 @@ TEST_F(VerticalDistributionSingleTest, SingleWithMask) {
  */
 TEST_F(VerticalDistributionSingleTest, SingleMultipleLayersReplace) {
     int nx = 2, ny = 2, nz = 5;
-    AcesConfig config;
+    CeceConfig config;
 
     // Layer 1: Add 10.0 to layer 2
     EmissionLayer layer1;
@@ -460,7 +458,7 @@ TEST_F(VerticalDistributionSingleTest, SingleMultipleLayersReplace) {
  */
 TEST_F(VerticalDistributionSingleTest, LargeGridMassConservation) {
     int nx = 360, ny = 180, nz = 72;
-    AcesConfig config;
+    CeceConfig config;
 
     EmissionLayer layer;
     layer.operation = "add";
@@ -502,4 +500,4 @@ TEST_F(VerticalDistributionSingleTest, LargeGridMassConservation) {
     EXPECT_LT(rel_error, 1e-10);
 }
 
-}  // namespace aces
+}  // namespace cece

@@ -1,6 +1,6 @@
 # Configuration Reference
 
-ACES is configured using a YAML file, typically named `aces_config.yaml`. This file defines the species to be processed, the source of data, and the active physics schemes.
+CECE is configured using a YAML file, typically named `cece_config.yaml`. This file defines the species to be processed, the source of data, and the active physics schemes.
 
 ## Top-Level Structure
 
@@ -32,7 +32,7 @@ physics_schemes:
 diagnostics:
   # ... diagnostic settings and output configuration ...
 
-aces_data:
+cece_data:
   # ... TIDE data stream settings ...
 
 output:
@@ -43,21 +43,77 @@ output:
 
 ## `driver`
 
-The `driver` section configures the execution timing and control parameters for ACES simulations.
+The `driver` section configures the execution timing and control parameters for CECE simulations.
 
 | Key | Type | Description |
 | --- | --- | --- |
 | `start_time` | String | Simulation start time in ISO 8601 format (e.g., "2020-01-01T00:00:00") |
 | `end_time` | String | Simulation end time in ISO 8601 format |
-| `timestep_seconds` | Integer | Time step duration in seconds |
+| `timestep_seconds` | Integer | Base time step duration in seconds. All component refresh intervals must be integer multiples of this value. |
+| `stacking_refresh_interval_seconds` | Integer | (Optional) Stacking engine execution interval in seconds. Must be a positive multiple of `timestep_seconds`. Default: `0` (use `timestep_seconds`). |
 
 **Example:**
 ```yaml
 driver:
   start_time: "2020-01-01T00:00:00"
   end_time: "2020-01-01T06:00:00"
-  timestep_seconds: 3600  # 1-hour timesteps
+  timestep_seconds: 300                      # 5-minute base timestep
+  stacking_refresh_interval_seconds: 3600    # Stacking runs hourly
 ```
+
+---
+
+## Clock Refresh Intervals
+
+CECE supports independent refresh intervals for each component (physics schemes, data streams, and the stacking engine). This allows fast-responding schemes like biogenics to run every few minutes while slower-changing data streams ingest hourly, reducing unnecessary computation.
+
+### How It Works
+
+- The `timestep_seconds` in the `driver` section defines the base clock cadence.
+- Each component can declare a `refresh_interval_seconds` that must be a positive integer multiple of `timestep_seconds`.
+- Components without a `refresh_interval_seconds` (or with value `0`) default to the base timestep — they run every step, preserving backward compatibility.
+- On the first timestep, all components execute regardless of their interval (first-step guarantee).
+- The stacking engine always executes after all other due components in a given step.
+
+### Configuration
+
+Add `refresh_interval_seconds` to individual physics schemes or data streams, and `stacking_refresh_interval_seconds` to the driver section:
+
+```yaml
+driver:
+  timestep_seconds: 300                      # 5-minute base
+  stacking_refresh_interval_seconds: 3600    # Stacking runs hourly
+
+physics_schemes:
+  - name: "megan"
+    language: "cpp"
+    refresh_interval_seconds: 300            # Every base step (5 min)
+    options: { ... }
+
+  - name: "sea_salt"
+    language: "cpp"
+    refresh_interval_seconds: 1800           # Every 30 min
+    options: { ... }
+
+cece_data:
+  streams:
+    - name: "ANTHROPOGENIC"
+      file: "/data/CEDS_2020.nc"
+      refresh_interval_seconds: 3600         # Ingest hourly
+```
+
+### Validation
+
+At startup, the clock validates all intervals. Errors are raised if:
+
+- An interval is not a positive integer
+- An interval is not an integer multiple of `timestep_seconds`
+
+Error messages name the offending component for easy debugging.
+
+### Backward Compatibility
+
+Existing configurations without any `refresh_interval_seconds` fields continue to work unchanged — all components run every timestep, identical to previous behavior.
 
 ---
 
@@ -89,7 +145,7 @@ grid:
 
 ## `meteorology`
 
-Maps ACES internal field names to external data source field names for meteorological inputs.
+Maps CECE internal field names to external data source field names for meteorological inputs.
 
 **Example:**
 ```yaml
@@ -104,7 +160,7 @@ meteorology:
 
 ## `scale_factors`
 
-Maps ACES internal scale factor names to external field names for dynamic scaling.
+Maps CECE internal scale factor names to external field names for dynamic scaling.
 
 **Example:**
 ```yaml
@@ -118,7 +174,7 @@ scale_factors:
 
 ## `masks`
 
-Maps ACES internal mask names to external field names for geographical masking.
+Maps CECE internal mask names to external field names for geographical masking.
 
 **Example:**
 ```yaml
@@ -160,7 +216,7 @@ The `species` block defines the emission targets and the layers that contribute 
 
 | Key | Type | Description |
 | --- | --- | --- |
-| `field` | String | Name of the input field. ACES looks in TIDE first, then ESMF ImportState. |
+| `field` | String | Name of the input field. CECE looks in TIDE first, then ESMF ImportState. |
 | `operation` | String | How to combine with existing data: `add`, `multiply`, `replace`, or `set` |
 | `scale` | Float | Base scaling factor (Default: `1.0`) |
 | `category` | String | Logical grouping for layers (e.g., "anthropogenic", "biogenic") |
@@ -243,6 +299,7 @@ List of physics schemes to instantiate and execute during the Run phase. Physics
 | --- | --- | --- |
 | `name` | String | Registered scheme name (e.g., "sea_salt", "megan", "dust") |
 | `language` | String | Implementation language: `cpp` or `fortran` |
+| `refresh_interval_seconds` | Integer | (Optional) Execution interval in seconds. Must be a positive multiple of `timestep_seconds`. Default: `0` (use `timestep_seconds`, i.e., run every step). |
 | `options` | Map | Scheme-specific configuration parameters |
 
 ### Available Physics Schemes
@@ -250,9 +307,10 @@ List of physics schemes to instantiate and execute during the Run phase. Physics
 | Scheme Name | Description | Key Parameters |
 | ----------- | ----------- | -------------- |
 | `sea_salt` | Marine aerosol emissions | `r_sala_min`, `r_salc_max`, `sea_salt_density` |
-| `megan` | Biogenic VOC emissions | `temperature_response`, `par_response` |
+| `megan` | Biogenic isoprene emissions (single-species) | `beta`, `ldf`, `aef`, `co2_concentration` |
+| `megan3` | Full MEGAN3 multi-species biogenic emissions | `mechanism_file`, `speciation_file`, `emission_classes` |
+| `bdsnp` | Soil NO emissions (BDSNP/YL95) | `soil_no_method`, `fert_emission_factor` |
 | `dust` | Mineral dust emissions | `particle_density`, `tuning_factor` |
-| `soil_nox` | Soil nitrogen emissions | `temp_coefficient`, `moisture_response` |
 | `lightning` | Lightning NOx production | `yield_land`, `yield_ocean` |
 | `volcano` | Volcanic SO₂ emissions | `target_location`, `emission_rate` |
 | `dms` | Ocean DMS emissions | `schmidt_coeffs`, `transfer_velocity` |
@@ -286,6 +344,157 @@ physics_schemes:
 
 ---
 
+## Speciation Files (SPC and MAP)
+
+The MEGAN3 scheme uses two external YAML files to define chemical mechanism speciation. This allows switching between mechanisms (CB6, RACM2, SAPRC07, CRACMM2) at runtime without recompilation.
+
+### SPC File — Mechanism Species Definition
+
+Defines the target mechanism species and their molecular weights. Uses the MICM/OpenAtmos format.
+
+**Format:**
+
+```yaml
+name: <mechanism_name>
+species:
+  - name: <species_name>
+    molecular weight [kg mol-1]: <value>
+  - name: <species_name>
+    molecular weight [kg mol-1]: <value>
+```
+
+**Example** (`data/speciation/spc_cb6.yaml`):
+
+```yaml
+name: CB6_AE7
+species:
+  - name: ISOP
+    molecular weight [kg mol-1]: 0.06812
+  - name: TERP
+    molecular weight [kg mol-1]: 0.13623
+  - name: PAR
+    molecular weight [kg mol-1]: 0.01443
+  - name: MEOH
+    molecular weight [kg mol-1]: 0.03204
+  - name: "NO"
+    molecular weight [kg mol-1]: 0.03001
+  - name: CO
+    molecular weight [kg mol-1]: 0.02801
+  # ... up to 36 species for CB6
+```
+
+**Rules:**
+- `name` key is required (mechanism identifier)
+- Each species must have `name` (string) and `molecular weight [kg mol-1]` (positive number)
+- Quote `"NO"` to prevent YAML 1.1 boolean interpretation
+
+### MAP File — Speciation Mappings
+
+Defines how emission classes map to mechanism species with per-class scale factors. Uses a dataset-oriented format supporting multiple emission sources.
+
+**Format:**
+
+```yaml
+mechanism: <mechanism_name>
+datasets:
+  <dataset_name>:
+    <mechanism_species>:
+      <emission_class>: <scale_factor>
+      <emission_class>: <scale_factor>
+    <mechanism_species>:
+      <emission_class>: <scale_factor>
+```
+
+**Example** (`data/speciation/map_cb6.yaml`):
+
+```yaml
+mechanism: CB6_AE7
+datasets:
+  MEGAN:
+    ISOP:
+      ISOP: 1.0
+    TERP:
+      MT_PINE: 0.5
+      MT_ACYC: 0.3
+      MT_CAMP: 0.1
+      MT_SABI: 0.05
+      MT_AROM: 0.05
+    MEOH:
+      MEOH: 1.0
+    SESQ:
+      SQT_HR: 0.7
+      SQT_LR: 0.3
+    "NO":
+      "NO": 1.0
+    CO:
+      CO: 1.0
+```
+
+**Rules:**
+- `mechanism` key is required and must match the SPC file's `name`
+- `datasets` section is required; each key is a dataset name (e.g., `MEGAN`)
+- Each mechanism species entry maps emission class names to positive scale factors
+- Valid emission classes: `ISOP`, `MBO`, `MT_PINE`, `MT_ACYC`, `MT_CAMP`, `MT_SABI`, `MT_AROM`, `NO`, `SQT_HR`, `SQT_LR`, `MEOH`, `ACTO`, `ETOH`, `ACID`, `LVOC`, `OXPROD`, `STRESS`, `OTHER`, `CO`
+- All mechanism species referenced in the MAP must exist in the SPC file
+
+### Using SPC/MAP with MEGAN3
+
+Reference the speciation files in the MEGAN3 scheme configuration:
+
+```yaml
+physics_schemes:
+  - name: bdsnp
+    options:
+      soil_no_method: bdsnp
+
+  - name: megan3
+    options:
+      mechanism_file: data/speciation/spc_cb6.yaml
+      speciation_file: data/speciation/map_cb6.yaml
+      speciation_dataset: MEGAN
+      co2_concentration: 415.0
+      emission_classes:
+        ISOP:
+          ldf: 0.9996
+          ct1: 95.0
+          cleo: 2.0
+          beta: 0.13
+          default_aef: 1.0e-9
+        MT_PINE:
+          ldf: 0.10
+          ct1: 80.0
+          cleo: 1.83
+          beta: 0.10
+          default_aef: 3.0e-10
+        # ... remaining 17 classes
+    output_mapping:
+      MEGAN_ISOP: ISOP_BIOG
+      MEGAN_TERP: TERP_BIOG
+```
+
+The speciation engine computes each output species as:
+
+```
+output[TERP] = (class_total[MT_PINE] × 0.5 + class_total[MT_ACYC] × 0.3 + ...) × MW[TERP]
+```
+
+### Shipped Mechanism Files
+
+| Mechanism | SPC File | MAP File | Species Count |
+| --- | --- | --- | --- |
+| CB6_AE7 | `data/speciation/spc_cb6.yaml` | `data/speciation/map_cb6.yaml` | 36 |
+| RACM2 | `data/speciation/spc_racm2.yaml` | `data/speciation/map_racm2.yaml` | 43 |
+| SAPRC07 | `data/speciation/spc_saprc07.yaml` | `data/speciation/map_saprc07.yaml` | 38 |
+| CRACMM2 | `data/speciation/spc_cracmm.yaml` | `data/speciation/map_cracmm.yaml` | 56 |
+
+### Adding a Custom Mechanism
+
+1. Create an SPC file with your mechanism species and molecular weights (kg/mol)
+2. Create a MAP file with a `MEGAN` dataset mapping the 19 emission classes to your species
+3. Set `mechanism_file` and `speciation_file` in the MEGAN3 config to your file paths
+
+---
+
 ## `diagnostics`
 
 Controls diagnostic output and intermediate variable capture for analysis and validation.
@@ -311,7 +520,7 @@ diagnostics:
 
 ---
 
-## `aces_data`
+## `cece_data`
 
 Configuration for TIDE (Temporal Interpolation & Data Extraction) data streams for reading external emission inventories and auxiliary fields.
 
@@ -321,6 +530,7 @@ Configuration for TIDE (Temporal Interpolation & Data Extraction) data streams f
 | --- | --- | --- |
 | `name` | String | Unique identifier for the data stream |
 | `file` | String | Path to NetCDF data file(s) |
+| `refresh_interval_seconds` | Integer | (Optional) Data ingestion interval in seconds. Must be a positive multiple of `timestep_seconds`. Default: `0` (use `timestep_seconds`, i.e., ingest every step). |
 | `yearFirst` | Integer | First year of data coverage |
 | `yearLast` | Integer | Last year of data coverage |
 | `yearAlign` | Integer | Simulation year to align with data |
@@ -334,11 +544,11 @@ Configuration for TIDE (Temporal Interpolation & Data Extraction) data streams f
 | Key | Type | Description |
 | --- | --- | --- |
 | `file` | String | Variable name in NetCDF file |
-| `model` | String | Internal field name in ACES |
+| `model` | String | Internal field name in CECE |
 
 **Example:**
 ```yaml
-aces_data:
+cece_data:
   streams:
     - name: "MACCITY_CO"
       file: "/data/inventories/MACCity_CO_2010.nc"
@@ -350,7 +560,7 @@ aces_data:
       mapalgo: "consd"          # Conservative regridding
       variables:
         - file: "MACCity_CO"    # Variable name in file
-          model: "global_co_inventory"  # Internal ACES field name
+          model: "global_co_inventory"  # Internal CECE field name
 
     - name: "HTAP_NOX"
       file: "/data/inventories/HTAPv3_NOx_*.nc"  # Wildcard for multiple files
@@ -395,7 +605,7 @@ Configuration for NetCDF output file generation with emission fields and diagnos
 output:
   enabled: true
   directory: "./output"
-  filename_pattern: "aces_emissions_{YYYY}{MM}{DD}_{HH}{mm}{ss}.nc"
+  filename_pattern: "cece_emissions_{YYYY}{MM}{DD}_{HH}{mm}{ss}.nc"
   frequency_steps: 1            # Output every timestep
   fields:
     - "co"

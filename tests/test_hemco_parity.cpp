@@ -1,8 +1,8 @@
 /**
  * @file test_hemco_parity.cpp
- * @brief HEMCO feature parity test suite for ACES.
+ * @brief HEMCO feature parity test suite for CECE.
  *
- * Tests that ACES produces emissions matching HEMCO behaviour for:
+ * Tests that CECE produces emissions matching HEMCO behaviour for:
  *   - Anthropogenic, biogenic, biomass burning, natural, and aircraft categories
  *   - Temporal scaling: diurnal (24h), weekly (7d), seasonal (12m)
  *   - Vertical distribution methods: SINGLE, RANGE, PRESSURE, HEIGHT, PBL
@@ -22,13 +22,13 @@
 #include <string>
 #include <vector>
 
-#include "aces/aces_compute.hpp"
-#include "aces/aces_config.hpp"
-#include "aces/aces_provenance.hpp"
-#include "aces/aces_stacking_engine.hpp"
-#include "aces/aces_state.hpp"
+#include "cece/cece_compute.hpp"
+#include "cece/cece_config.hpp"
+#include "cece/cece_provenance.hpp"
+#include "cece/cece_stacking_engine.hpp"
+#include "cece/cece_state.hpp"
 
-namespace aces {
+namespace cece {
 
 // ---------------------------------------------------------------------------
 // Shared test fixture
@@ -56,11 +56,11 @@ class HemcoParityTest : public ::testing::Test {
     }
 
     /** Runs the StackingEngine and returns the host-side result view. */
-    static Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> RunEngine(
-        AcesConfig& config, AcesImportState& import_state, AcesExportState& export_state,
-        int hour = 0, int dow = 0, int month = 0, int nz = kNz) {
+    static Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace> RunEngine(CeceConfig& config, CeceImportState& import_state,
+                                                                                    CeceExportState& export_state, int hour = 0, int dow = 0,
+                                                                                    int month = 0, int nz = kNz) {
         std::unordered_map<std::string, std::string> empty;
-        AcesStateResolver resolver(import_state, export_state, empty, empty, empty);
+        CeceStateResolver resolver(import_state, export_state, empty, empty, empty);
         StackingEngine engine(config);
         engine.Execute(resolver, kNx, kNy, nz, {}, hour, dow, month);
         export_state.fields.begin()->second.sync<Kokkos::HostSpace>();
@@ -68,9 +68,7 @@ class HemcoParityTest : public ::testing::Test {
     }
 
     /** Computes max relative error between result and expected scalar. */
-    static double MaxRelError(
-        const Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace>& view, double expected,
-        int nz = kNz) {
+    static double MaxRelError(const Kokkos::View<double***, Kokkos::LayoutLeft, Kokkos::HostSpace>& view, double expected, int nz = kNz) {
         double max_err = 0.0;
         for (int i = 0; i < kNx; ++i)
             for (int j = 0; j < kNy; ++j)
@@ -87,12 +85,12 @@ class HemcoParityTest : public ::testing::Test {
 // ---------------------------------------------------------------------------
 
 TEST_F(HemcoParityTest, AnthropogenicCategory) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["anthro_co"] = MakeField("anthro_co", 2.0e-9);
     exp.fields["co"] = MakeField("co", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay;
     lay.field_name = "anthro_co";
     lay.operation = "add";
@@ -106,12 +104,12 @@ TEST_F(HemcoParityTest, AnthropogenicCategory) {
 }
 
 TEST_F(HemcoParityTest, BiogenicCategory) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["biogenic_isop"] = MakeField("biogenic_isop", 5.0e-10);
     exp.fields["isop"] = MakeField("isop", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay;
     lay.field_name = "biogenic_isop";
     lay.operation = "add";
@@ -125,12 +123,12 @@ TEST_F(HemcoParityTest, BiogenicCategory) {
 }
 
 TEST_F(HemcoParityTest, BiomassBurningCategory) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["bb_co"] = MakeField("bb_co", 3.0e-9);
     exp.fields["co"] = MakeField("co", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay;
     lay.field_name = "bb_co";
     lay.operation = "add";
@@ -144,12 +142,12 @@ TEST_F(HemcoParityTest, BiomassBurningCategory) {
 }
 
 TEST_F(HemcoParityTest, NaturalCategory) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["nat_so2"] = MakeField("nat_so2", 1.0e-11);
     exp.fields["so2"] = MakeField("so2", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay;
     lay.field_name = "nat_so2";
     lay.operation = "add";
@@ -163,12 +161,12 @@ TEST_F(HemcoParityTest, NaturalCategory) {
 }
 
 TEST_F(HemcoParityTest, AircraftCategory) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["air_nox"] = MakeField("air_nox", 4.0e-12);
     exp.fields["nox"] = MakeField("nox", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay;
     lay.field_name = "air_nox";
     lay.operation = "add";
@@ -190,12 +188,12 @@ TEST_F(HemcoParityTest, DiurnalCycleScaling) {
     std::vector<double> diurnal(24, 1.0);
     diurnal[6] = 2.0;
 
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["base_co"] = MakeField("base_co", 1.0e-9);
     exp.fields["co"] = MakeField("co", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     cfg.temporal_profiles["diurnal_test"] = TemporalCycle{diurnal};
     EmissionLayer lay;
     lay.field_name = "base_co";
@@ -207,20 +205,19 @@ TEST_F(HemcoParityTest, DiurnalCycleScaling) {
 
     // At hour 6, scale = 2.0 -> emission = 2.0e-9
     auto result = RunEngine(cfg, imp, exp, /*hour=*/6, /*dow=*/0, /*month=*/0);
-    EXPECT_LT(MaxRelError(result, 2.0e-9), 1e-10)
-        << "Diurnal cycle not applied correctly at hour 6";
+    EXPECT_LT(MaxRelError(result, 2.0e-9), 1e-10) << "Diurnal cycle not applied correctly at hour 6";
 }
 
 TEST_F(HemcoParityTest, WeeklyCycleScaling) {
     // 7 daily factors: factor on day 1 (Monday) = 1.5
     std::vector<double> weekly = {1.0, 1.5, 1.0, 1.0, 1.0, 0.8, 0.8};
 
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["base_nox"] = MakeField("base_nox", 1.0e-9);
     exp.fields["nox"] = MakeField("nox", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     cfg.temporal_profiles["weekly_test"] = TemporalCycle{weekly};
     EmissionLayer lay;
     lay.field_name = "base_nox";
@@ -240,12 +237,12 @@ TEST_F(HemcoParityTest, SeasonalCycleScaling) {
     std::vector<double> seasonal(12, 1.0);
     seasonal[6] = 3.0;
 
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["base_so2"] = MakeField("base_so2", 1.0e-10);
     exp.fields["so2"] = MakeField("so2", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     cfg.temporal_profiles["seasonal_test"] = TemporalCycle{seasonal};
     EmissionLayer lay;
     lay.field_name = "base_so2";
@@ -257,8 +254,7 @@ TEST_F(HemcoParityTest, SeasonalCycleScaling) {
 
     // month=6 -> factor 3.0 -> emission = 3.0e-10
     auto result = RunEngine(cfg, imp, exp, /*hour=*/0, /*dow=*/0, /*month=*/6);
-    EXPECT_LT(MaxRelError(result, 3.0e-10), 1e-10)
-        << "Seasonal cycle not applied correctly for month 6";
+    EXPECT_LT(MaxRelError(result, 3.0e-10), 1e-10) << "Seasonal cycle not applied correctly for month 6";
 }
 
 TEST_F(HemcoParityTest, CombinedTemporalScaling) {
@@ -270,12 +266,12 @@ TEST_F(HemcoParityTest, CombinedTemporalScaling) {
     std::vector<double> seasonal(12, 1.0);
     seasonal[0] = 0.5;
 
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["base_co"] = MakeField("base_co", 1.0e-9);
     exp.fields["co"] = MakeField("co", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     cfg.temporal_profiles["d"] = TemporalCycle{diurnal};
     cfg.temporal_profiles["w"] = TemporalCycle{weekly};
     cfg.temporal_profiles["s"] = TemporalCycle{seasonal};
@@ -291,8 +287,7 @@ TEST_F(HemcoParityTest, CombinedTemporalScaling) {
 
     // Expected: 1e-9 * 2.0 * 1.5 * 0.5 = 1.5e-9
     auto result = RunEngine(cfg, imp, exp, /*hour=*/12, /*dow=*/3, /*month=*/0);
-    EXPECT_LT(MaxRelError(result, 1.5e-9), 1e-10)
-        << "Combined temporal scaling (diurnal*weekly*seasonal) incorrect";
+    EXPECT_LT(MaxRelError(result, 1.5e-9), 1e-10) << "Combined temporal scaling (diurnal*weekly*seasonal) incorrect";
 }
 
 // ---------------------------------------------------------------------------
@@ -301,12 +296,12 @@ TEST_F(HemcoParityTest, CombinedTemporalScaling) {
 
 TEST_F(HemcoParityTest, VerticalDistributionSingle) {
     const int nz = 5;
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["base_co"] = MakeField("base_co", 1.0, /*nz=*/1);
     exp.fields["co"] = MakeField("co", 0.0, nz);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay;
     lay.field_name = "base_co";
     lay.operation = "add";
@@ -317,7 +312,7 @@ TEST_F(HemcoParityTest, VerticalDistributionSingle) {
     cfg.species_layers["co"] = {lay};
 
     std::unordered_map<std::string, std::string> empty;
-    AcesStateResolver resolver(imp, exp, empty, empty, empty);
+    CeceStateResolver resolver(imp, exp, empty, empty, empty);
     StackingEngine engine(cfg);
     engine.Execute(resolver, kNx, kNy, nz, {}, 0, 0, 0);
     exp.fields["co"].sync<Kokkos::HostSpace>();
@@ -333,12 +328,12 @@ TEST_F(HemcoParityTest, VerticalDistributionSingle) {
 
 TEST_F(HemcoParityTest, VerticalDistributionRange) {
     const int nz = 6;
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["base_co"] = MakeField("base_co", 6.0, /*nz=*/1);
     exp.fields["co"] = MakeField("co", 0.0, nz);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay;
     lay.field_name = "base_co";
     lay.operation = "add";
@@ -350,7 +345,7 @@ TEST_F(HemcoParityTest, VerticalDistributionRange) {
     cfg.species_layers["co"] = {lay};
 
     std::unordered_map<std::string, std::string> empty;
-    AcesStateResolver resolver(imp, exp, empty, empty, empty);
+    CeceStateResolver resolver(imp, exp, empty, empty, empty);
     StackingEngine engine(cfg);
     engine.Execute(resolver, kNx, kNy, nz, {}, 0, 0, 0);
     exp.fields["co"].sync<Kokkos::HostSpace>();
@@ -372,8 +367,8 @@ TEST_F(HemcoParityTest, VerticalDistributionRange) {
 // ---------------------------------------------------------------------------
 
 TEST_F(HemcoParityTest, HierarchyRegionalOverride) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["global_co"] = MakeField("global_co", 5.0e-9);
     imp.fields["regional_co"] = MakeField("regional_co", 12.0e-9);
     exp.fields["co"] = MakeField("co", 0.0);
@@ -387,7 +382,7 @@ TEST_F(HemcoParityTest, HierarchyRegionalOverride) {
     mask.sync<Kokkos::DefaultExecutionSpace>();
     imp.fields["region_mask"] = mask;
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer global_lay;
     global_lay.field_name = "global_co";
     global_lay.operation = "add";
@@ -408,8 +403,7 @@ TEST_F(HemcoParityTest, HierarchyRegionalOverride) {
     for (int i = 0; i < kNx; ++i)
         for (int j = 0; j < kNy; ++j) {
             if (j >= kNy / 2) {
-                EXPECT_NEAR(result(i, j, 0), 12.0e-9, 1e-20)
-                    << "Inside mask: regional should replace global";
+                EXPECT_NEAR(result(i, j, 0), 12.0e-9, 1e-20) << "Inside mask: regional should replace global";
             } else {
                 EXPECT_NEAR(result(i, j, 0), 5.0e-9, 1e-20) << "Outside mask: global should remain";
             }
@@ -421,12 +415,12 @@ TEST_F(HemcoParityTest, HierarchyRegionalOverride) {
 // ---------------------------------------------------------------------------
 
 TEST_F(HemcoParityTest, ConstantScaleFactor) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["base_co"] = MakeField("base_co", 1.0e-9);
     exp.fields["co"] = MakeField("co", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay;
     lay.field_name = "base_co";
     lay.operation = "add";
@@ -439,15 +433,15 @@ TEST_F(HemcoParityTest, ConstantScaleFactor) {
 }
 
 TEST_F(HemcoParityTest, SpatiallyVaryingScaleFactor) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["base_co"] = MakeField("base_co", 1.0e-9);
 
     // Spatially varying scale: value = 2.0 everywhere for simplicity
     imp.fields["spatial_sf"] = MakeField("spatial_sf", 2.0);
     exp.fields["co"] = MakeField("co", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay;
     lay.field_name = "base_co";
     lay.operation = "add";
@@ -465,12 +459,12 @@ TEST_F(HemcoParityTest, SpatiallyVaryingScaleFactor) {
 // ---------------------------------------------------------------------------
 
 TEST_F(HemcoParityTest, DynamicSpeciesRegistration) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["new_species_field"] = MakeField("new_species_field", 7.0e-10);
     exp.fields["new_species"] = MakeField("new_species", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     // Start with an empty config, then add species at runtime
     EmissionLayer lay;
     lay.field_name = "new_species_field";
@@ -485,13 +479,13 @@ TEST_F(HemcoParityTest, DynamicSpeciesRegistration) {
 }
 
 TEST_F(HemcoParityTest, DynamicScaleFactorRegistration) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["base_co"] = MakeField("base_co", 1.0e-9);
     imp.fields["dynamic_sf"] = MakeField("dynamic_sf", 3.0);
     exp.fields["co"] = MakeField("co", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     AddScaleFactor(cfg, "dynamic_sf", "dynamic_sf");
 
     EmissionLayer lay;
@@ -503,8 +497,7 @@ TEST_F(HemcoParityTest, DynamicScaleFactorRegistration) {
     cfg.species_layers["co"] = {lay};
 
     auto result = RunEngine(cfg, imp, exp);
-    EXPECT_LT(MaxRelError(result, 3.0e-9), 1e-10)
-        << "Dynamically registered scale factor not applied";
+    EXPECT_LT(MaxRelError(result, 3.0e-9), 1e-10) << "Dynamically registered scale factor not applied";
 }
 
 // ---------------------------------------------------------------------------
@@ -512,13 +505,13 @@ TEST_F(HemcoParityTest, DynamicScaleFactorRegistration) {
 // ---------------------------------------------------------------------------
 
 TEST_F(HemcoParityTest, ProvenanceTracking) {
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["global_co"] = MakeField("global_co", 5.0e-9);
     imp.fields["regional_co"] = MakeField("regional_co", 12.0e-9);
     exp.fields["co"] = MakeField("co", 0.0);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay1;
     lay1.field_name = "global_co";
     lay1.operation = "add";
@@ -536,7 +529,7 @@ TEST_F(HemcoParityTest, ProvenanceTracking) {
     cfg.species_layers["co"] = {lay1, lay2};
 
     std::unordered_map<std::string, std::string> empty;
-    AcesStateResolver resolver(imp, exp, empty, empty, empty);
+    CeceStateResolver resolver(imp, exp, empty, empty, empty);
     StackingEngine engine(cfg);
     engine.Execute(resolver, kNx, kNy, kNz, {}, 0, 0, 0);
 
@@ -570,12 +563,12 @@ TEST_F(HemcoParityTest, MassConservationRange) {
     const int nz = 10;
     const double base_val = 1.0;
 
-    AcesImportState imp;
-    AcesExportState exp;
+    CeceImportState imp;
+    CeceExportState exp;
     imp.fields["base_co"] = MakeField("base_co", base_val, /*nz=*/1);
     exp.fields["co"] = MakeField("co", 0.0, nz);
 
-    AcesConfig cfg;
+    CeceConfig cfg;
     EmissionLayer lay;
     lay.field_name = "base_co";
     lay.operation = "add";
@@ -587,7 +580,7 @@ TEST_F(HemcoParityTest, MassConservationRange) {
     cfg.species_layers["co"] = {lay};
 
     std::unordered_map<std::string, std::string> empty;
-    AcesStateResolver resolver(imp, exp, empty, empty, empty);
+    CeceStateResolver resolver(imp, exp, empty, empty, empty);
     StackingEngine engine(cfg);
     engine.Execute(resolver, kNx, kNy, nz, {}, 0, 0, 0);
     exp.fields["co"].sync<Kokkos::HostSpace>();
@@ -598,12 +591,11 @@ TEST_F(HemcoParityTest, MassConservationRange) {
         for (int j = 0; j < kNy; ++j) {
             double col_sum = 0.0;
             for (int k = 0; k < nz; ++k) col_sum += result(i, j, k);
-            EXPECT_NEAR(col_sum, base_val, 1e-10)
-                << "Mass conservation violated at (" << i << "," << j << ")";
+            EXPECT_NEAR(col_sum, base_val, 1e-10) << "Mass conservation violated at (" << i << "," << j << ")";
         }
 }
 
-}  // namespace aces
+}  // namespace cece
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
